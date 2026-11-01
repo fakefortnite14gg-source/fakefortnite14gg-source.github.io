@@ -104,6 +104,51 @@
       </form>
     </section>
 
+
+    <section class="panel" style="margin-top:18px" aria-labelledby="ticketTitle">
+      <div class="eyebrow">Discord Support</div>
+      <h2 id="ticketTitle" style="font-size:1.8rem;margin-top:8px">Ticket-Bot</h2>
+      <p class="section-copy">Verbinde die Ticket-API, um Support-Rolle, Ticket-Kategorie und Transkript-Kanal hier einzustellen.</p>
+      <div class="connection">
+        <div>
+          <label for="ticketApiUrl">Ticket-API-Adresse</label>
+          <input id="ticketApiUrl" type="url" placeholder="https://tickets.example.de" autocomplete="url">
+          <p class="hint">HTTPS-Adresse des Ticket-Bots, z. B. https://tickets.example.de</p>
+        </div>
+        <div>
+          <label for="ticketApiKey">Dashboard-Schlüssel</label>
+          <input id="ticketApiKey" type="password" autocomplete="off" placeholder="TICKET_DASHBOARD_API_KEY">
+          <p class="hint">Wird nur in diesem Browser-Tab gehalten.</p>
+        </div>
+        <button class="primary" id="ticketConnectButton" type="button">Verbinden</button>
+      </div>
+      <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
+
+      <form id="ticketSettingsForm" class="settings locked">
+        <div class="setting-grid">
+          <div class="field">
+            <label for="supportRoleId">Support-Rollen-ID</label>
+            <input id="supportRoleId" type="text" inputmode="numeric" placeholder="Optional">
+            <p class="hint">Diese Rolle darf Tickets sehen und verwalten. Wird auch auf offene Tickets angewendet.</p>
+          </div>
+          <div class="field">
+            <label for="ticketCategoryId">Ticket-Kategorie-ID</label>
+            <input id="ticketCategoryId" type="text" inputmode="numeric" placeholder="Optional">
+            <p class="hint">Neue Tickets werden in dieser Kategorie erstellt.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ticketLogChannelId">Transkript-Kanal-ID</label>
+          <input id="ticketLogChannelId" type="text" inputmode="numeric" placeholder="Optional">
+          <p class="hint">Beim Schließen wird das Transkript der letzten 100 Nachrichten dorthin gesendet. Leer lassen, um Transkripte auszuschalten.</p>
+        </div>
+        <div class="actions">
+          <button class="primary" id="ticketSaveButton" type="submit">Ticket-Einstellungen speichern</button>
+          <button class="secondary" id="ticketDisconnectButton" type="button">Verbindung trennen</button>
+        </div>
+      </form>
+    </section>
+
     <footer>
       <span>GitHub Pages · Bot-Dashboard</span>
       <a href="https://github.com/fakefortnite14gg-source/mcdiscordlink">Bot-Code</a>
@@ -231,6 +276,109 @@
       setConnected(false);
       setNotice("Verbindung getrennt.");
     });
+ 
+    const ticketApiUrlInput = document.querySelector("#ticketApiUrl");
+    const ticketApiKeyInput = document.querySelector("#ticketApiKey");
+    const ticketConnectButton = document.querySelector("#ticketConnectButton");
+    const ticketSettingsForm = document.querySelector("#ticketSettingsForm");
+    const ticketNotice = document.querySelector("#ticketNotice");
+    let ticketApiBase = "";
+    let ticketDashboardKey = "";
+
+    function setTicketNotice(message, kind = "") {
+      ticketNotice.textContent = message;
+      ticketNotice.className = "notice" + (kind ? " " + kind : "");
+    }
+
+    function getTicketApiBase() {
+      const parsed = new URL(ticketApiUrlInput.value.trim());
+      if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+        throw new Error("Bitte eine HTTPS-Adresse ohne Zugangsdaten eingeben.");
+      }
+      return parsed.origin;
+    }
+
+    async function ticketRequest(method = "GET", body) {
+      const response = await fetch(ticketApiBase + "/api/ticket-dashboard/settings", {
+        method,
+        headers: {
+          "x-ticket-dashboard-key": ticketDashboardKey,
+          ...(body ? { "Content-Type": "application/json" } : {})
+        },
+        ...(body ? { body: JSON.stringify(body) } : {})
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const messages = {
+          401: "Dashboard-Schlüssel stimmt nicht.",
+          503: "Ticket-Dashboard ist auf dem Bot-Server noch nicht eingerichtet."
+        };
+        throw new Error(messages[response.status] || data.error || "Verbindung fehlgeschlagen.");
+      }
+      return data;
+    }
+
+    ticketConnectButton.addEventListener("click", async () => {
+      setTicketNotice("");
+      ticketConnectButton.disabled = true;
+      try {
+        ticketApiBase = getTicketApiBase();
+        ticketDashboardKey = ticketApiKeyInput.value;
+        if (!ticketDashboardKey) throw new Error("Bitte den Ticket-Dashboard-Schlüssel eingeben.");
+        const data = await ticketRequest();
+        document.querySelector("#supportRoleId").value = data.supportRoleId || "";
+        document.querySelector("#ticketCategoryId").value = data.categoryId || "";
+        document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
+        ticketApiKeyInput.value = "";
+        ticketSettingsForm.classList.remove("locked");
+        setTicketNotice("Ticket-Bot verbunden. Du kannst die Discord-IDs jetzt einstellen.", "success");
+      } catch (error) {
+        ticketApiBase = "";
+        ticketDashboardKey = "";
+        ticketSettingsForm.classList.add("locked");
+        setTicketNotice(error.message || "Ticket-Bot nicht erreichbar. Adresse und HTTPS-Verbindung prüfen.", "error");
+      } finally {
+        ticketConnectButton.disabled = false;
+      }
+    });
+
+    ticketSettingsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setTicketNotice("");
+      const saveButton = document.querySelector("#ticketSaveButton");
+      saveButton.disabled = true;
+      try {
+        const settings = {
+          supportRoleId: document.querySelector("#supportRoleId").value.trim(),
+          categoryId: document.querySelector("#ticketCategoryId").value.trim(),
+          logChannelId: document.querySelector("#ticketLogChannelId").value.trim()
+        };
+        const idPattern = /^\d{17,20}$/;
+        for (const [key, value] of Object.entries(settings)) {
+          if (value && !idPattern.test(value)) {
+            throw new Error("Bitte bei allen ausgefüllten IDs nur die vollständige Discord-ID aus Zahlen eingeben.");
+          }
+        }
+        const result = await ticketRequest("PUT", settings);
+        if (result.warning) {
+          setTicketNotice(result.warning, "error");
+        } else {
+          setTicketNotice("Ticket-Einstellungen gespeichert. Offene Tickets mit neuer Support-Rolle: " + result.updatedOpenTickets + ".", "success");
+        }
+      } catch (error) {
+        setTicketNotice(error.message || "Speichern fehlgeschlagen.", "error");
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    document.querySelector("#ticketDisconnectButton").addEventListener("click", () => {
+      ticketApiBase = "";
+      ticketDashboardKey = "";
+      ticketSettingsForm.classList.add("locked");
+      setTicketNotice("Ticket-Bot-Verbindung getrennt.");
+    });
+
   </script>
 </body>
 </html>
