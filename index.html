@@ -4,97 +4,233 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1020">
-  <title>Testseite · GitHub Pages</title>
+  <title>Bot-Dashboard · GitHub Pages</title>
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #0b1020;
-      --panel: rgba(18, 27, 50, .78);
-      --text: #f4f7ff;
-      --muted: #9caac7;
-      --line: rgba(166, 190, 255, .15);
-      --accent: #8b9cff;
-      --mint: #75e0c1;
-    }
-    * { box-sizing: border-box; }
-    body {
-      min-height: 100vh;
-      margin: 0;
-      padding: 28px;
-      display: grid;
-      place-items: center;
-      color: var(--text);
-      background:
-        radial-gradient(ellipse at 18% 12%, rgba(71, 92, 184, .28), transparent 38%),
-        radial-gradient(ellipse at 84% 82%, rgba(32, 149, 132, .17), transparent 35%),
-        var(--bg);
-      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    main { width: min(100%, 880px); }
-    .topline { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px; }
-    .brand { color: var(--muted); font-size: .9rem; letter-spacing: .08em; text-transform: uppercase; }
-    .status { display:inline-flex; align-items:center; gap:8px; color:var(--mint); font-size:.85rem; }
+    :root { color-scheme:dark; --bg:#0b1020; --panel:rgba(18,27,50,.82); --text:#f4f7ff; --muted:#9caac7; --line:rgba(166,190,255,.16); --accent:#aebaff; --mint:#75e0c1; }
+    * { box-sizing:border-box; }
+    body { min-height:100vh; margin:0; padding:28px; color:var(--text); background:radial-gradient(ellipse at 18% 12%,rgba(71,92,184,.28),transparent 38%),radial-gradient(ellipse at 84% 82%,rgba(32,149,132,.17),transparent 35%),var(--bg); font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { width:min(100%,900px); margin:24px auto; }
+    .topline { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
+    .brand,.eyebrow { color:var(--accent); font-size:.82rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .status { display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:.88rem; }
+    .status.connected { color:var(--mint); }
     .dot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 14px currentColor; }
-    .hero, .card { border:1px solid var(--line); background:var(--panel); backdrop-filter:blur(12px); border-radius:24px; }
-    .hero { padding:clamp(28px, 6vw, 64px); position:relative; overflow:hidden; }
-    .hero::after { content:""; position:absolute; width:230px; height:230px; border:1px solid rgba(139,156,255,.18); border-radius:50%; right:-80px; top:-100px; box-shadow:0 0 0 28px rgba(139,156,255,.035), 0 0 0 58px rgba(139,156,255,.025); pointer-events:none; }
-    .eyebrow { color:var(--accent); font-weight:650; font-size:.85rem; letter-spacing:.12em; text-transform:uppercase; }
-    h1 { max-width:650px; margin:14px 0; font-size:clamp(2.5rem, 7vw, 5rem); line-height:1.02; letter-spacing:-.055em; }
-    .intro { max-width:570px; color:var(--muted); font-size:1.1rem; }
-    .actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:28px; }
-    button, .link { border:0; border-radius:12px; padding:12px 17px; font:inherit; font-weight:650; text-decoration:none; cursor:pointer; }
-    button { color:#10152a; background:linear-gradient(135deg, #aebaff, #78e3cb); box-shadow:0 8px 28px rgba(117,224,193,.15); }
-    button:hover { transform:translateY(-1px); filter:brightness(1.06); }
-    button:focus-visible, a:focus-visible { outline:3px solid #fff; outline-offset:3px; }
-    .link { color:var(--text); border:1px solid var(--line); background:rgba(255,255,255,.035); }
-    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px; }
-    .card { padding:20px; }
-    .label { color:var(--muted); font-size:.86rem; }
-    .value { margin-top:6px; font-size:1.15rem; font-weight:700; }
-    .count { color:var(--mint); font-variant-numeric:tabular-nums; }
-    footer { margin:18px 4px 0; color:var(--muted); font-size:.84rem; text-align:center; }
-    @media (max-width:640px) { body { padding:16px; } .topline { align-items:flex-start; flex-direction:column; } .grid { grid-template-columns:1fr; } }
-    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; } }
+    .panel { border:1px solid var(--line); border-radius:22px; background:var(--panel); backdrop-filter:blur(12px); padding:clamp(22px,5vw,42px); }
+    h1 { margin:10px 0 8px; font-size:clamp(2rem,5vw,3.25rem); line-height:1.08; letter-spacing:-.045em; }
+    .intro { max-width:660px; margin:0 0 28px; color:var(--muted); }
+    h2 { margin:0 0 6px; font-size:1.18rem; }
+    .section-copy { margin:0 0 18px; color:var(--muted); font-size:.92rem; }
+    .connection { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:end; padding:18px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.025); }
+    label { display:block; margin-bottom:6px; color:#dce4fa; font-size:.9rem; font-weight:600; }
+    input[type="url"], input[type="password"], input[type="number"], input[type="text"] { width:100%; min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; color:var(--text); background:#0c1428; font:inherit; }
+    input:focus-visible,button:focus-visible,a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+    .hint { margin:6px 0 0; color:var(--muted); font-size:.78rem; }
+    button,.link { min-height:44px; border:0; border-radius:10px; padding:10px 15px; font:inherit; font-weight:700; cursor:pointer; text-decoration:none; }
+    button.primary { color:#10152a; background:linear-gradient(135deg,#aebaff,#78e3cb); }
+    button.secondary,.link { color:var(--text); border:1px solid var(--line); background:rgba(255,255,255,.035); }
+    button:hover,.link:hover { filter:brightness(1.08); }
+    .settings { margin-top:28px; padding-top:25px; border-top:1px solid var(--line); }
+    .setting-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .field { margin-bottom:16px; }
+    .toggle { display:flex; align-items:flex-start; gap:12px; padding:15px; border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.025); }
+    .toggle input { width:18px; height:18px; margin:3px 0 0; accent-color:#8b9cff; }
+    .toggle label { margin:0; }
+    .toggle small { display:block; color:var(--muted); font-weight:400; }
+    .preview { margin-top:8px; padding:10px 12px; border-radius:10px; color:var(--muted); background:rgba(255,255,255,.035); font-size:.86rem; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .notice { min-height:26px; margin:12px 0 0; color:var(--muted); font-size:.9rem; }
+    .notice.error { color:#ff9d9d; }
+    .notice.success { color:var(--mint); }
+    .locked { opacity:.48; pointer-events:none; }
+    footer { display:flex; justify-content:center; flex-wrap:wrap; gap:18px; margin:18px 0 0; color:var(--muted); font-size:.84rem; }
+    footer a { color:var(--muted); }
+    @media(max-width:700px) { body{padding:16px}.topline{align-items:flex-start;flex-direction:column}.connection{grid-template-columns:1fr}.setting-grid{grid-template-columns:1fr}.connection button{width:100%} }
   </style>
 </head>
 <body>
   <main>
     <div class="topline">
-      <div class="brand">Dein kleines Web-Experiment</div>
-      <div class="status"><span class="dot"></span> Alles bereit</div>
+      <div class="brand">Minecraft ↔ Discord</div>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">Nicht verbunden</span></div>
     </div>
 
-    <section class="hero">
-      <div class="eyebrow">GitHub Pages · Testlauf</div>
-      <h1>Hallo Welt<span style="color:var(--accent)">.</span></h1>
-      <p class="intro">Diese Seite ist live im Web. Probier den Button aus und schau, wie sich der Zähler verändert.</p>
-      <div class="actions">
-        <button id="countButton" type="button">Button testen <span aria-hidden="true">→</span></button>
-        <a class="link" href="https://github.com/fakefortnite14gg-source/fakefortnite14gg-source.github.io">Zum GitHub-Repository ↗</a>
-      </div>
+    <section class="panel">
+      <div class="eyebrow">Bot-Verwaltung</div>
+      <h1>Einstellungen</h1>
+      <p class="intro">Verwalte die Minecraft-Verknüpfung und das Nickname-Format deines Discord-Bots. Die Verbindung läuft direkt zu deiner Bot-API.</p>
+
+      <section aria-labelledby="connectTitle">
+        <h2 id="connectTitle">Mit deinem Bot verbinden</h2>
+        <p class="section-copy">Die API-Adresse muss über HTTPS erreichbar sein. Dein Dashboard-Schlüssel bleibt nur in diesem Browser-Tab.</p>
+        <div class="connection">
+          <div>
+            <label for="apiUrl">Bot-API-Adresse</label>
+            <input id="apiUrl" type="url" inputmode="url" placeholder="https://bot.example.de" autocomplete="url">
+            <p class="hint">Zum Beispiel: https://bot.example.de</p>
+          </div>
+          <div>
+            <label for="apiKey">Dashboard-Schlüssel</label>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="DASHBOARD_API_KEY">
+          </div>
+          <button class="primary" id="connectButton" type="button">Verbinden</button>
+        </div>
+        <p class="notice" id="notice" role="status" aria-live="polite"></p>
+      </section>
+
+      <form id="settingsForm" class="settings locked">
+        <h2>Bot-Einstellungen</h2>
+        <p class="section-copy">Änderungen werden gespeichert und sofort vom Bot verwendet.</p>
+        <div class="setting-grid">
+          <div class="toggle">
+            <input id="linkEnabled" type="checkbox">
+            <label for="linkEnabled">Verknüpfungen aktivieren<small>Schaltet den Discord-Befehl /link und die Minecraft-Verknüpfung an oder aus.</small></label>
+          </div>
+          <div class="field">
+            <label for="codeExpiry">Code gültig für</label>
+            <input id="codeExpiry" type="number" min="1" max="1440" step="1" value="10" inputmode="numeric">
+            <p class="hint">1 bis 1440 Minuten</p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="nicknameFormat">Discord-Nickname-Format</label>
+          <input id="nicknameFormat" type="text" maxlength="100" value="Player | {name}">
+          <p class="hint">Der Platzhalter {name} wird durch den Minecraft-Namen ersetzt. Discord-Nicknames sind höchstens 32 Zeichen lang.</p>
+          <div class="preview" id="preview">Vorschau: Player | Alex</div>
+        </div>
+        <div class="actions">
+          <button class="primary" id="saveButton" type="submit">Einstellungen speichern</button>
+          <button class="secondary" id="disconnectButton" type="button">Verbindung trennen</button>
+        </div>
+      </form>
     </section>
 
-    <section class="grid" aria-label="Seitenstatus">
-      <div class="card"><div class="label">Veröffentlichung</div><div class="value">GitHub Pages</div></div>
-      <div class="card"><div class="label">Interaktion</div><div class="value">Klicks: <span class="count" id="count" aria-live="polite">0</span></div></div>
-      <div class="card"><div class="label">Ansicht</div><div class="value" id="viewport">Wird erkannt …</div></div>
-    </section>
-
-    <footer>Eine schlichte Testseite · gebaut mit HTML, CSS und JavaScript</footer>
+    <footer>
+      <span>GitHub Pages · Bot-Dashboard</span>
+      <a href="https://github.com/fakefortnite14gg-source/mcdiscordlink">Bot-Code</a>
+      <a href="https://github.com/fakefortnite14gg-source/fakefortnite14gg-source.github.io">Webseite</a>
+    </footer>
   </main>
+
   <script>
-    let clicks = 0;
-    const count = document.querySelector("#count");
-    document.querySelector("#countButton").addEventListener("click", () => {
-      clicks += 1;
-      count.textContent = clicks;
+    const apiUrlInput = document.querySelector("#apiUrl");
+    const apiKeyInput = document.querySelector("#apiKey");
+    const connectButton = document.querySelector("#connectButton");
+    const settingsForm = document.querySelector("#settingsForm");
+    const notice = document.querySelector("#notice");
+    const status = document.querySelector("#status");
+    const statusText = document.querySelector("#statusText");
+    const nicknameFormat = document.querySelector("#nicknameFormat");
+    let dashboardKey = "";
+    let apiBase = "";
+
+    function setNotice(message, kind = "") {
+      notice.textContent = message;
+      notice.className = "notice" + (kind ? " " + kind : "");
+    }
+
+    function setConnected(connected) {
+      settingsForm.classList.toggle("locked", !connected);
+      status.classList.toggle("connected", connected);
+      statusText.textContent = connected ? "Verbunden" : "Nicht verbunden";
+    }
+
+    function getApiBase() {
+      const parsed = new URL(apiUrlInput.value.trim());
+      if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
+        throw new Error("Bitte eine HTTPS-Adresse ohne Zugangsdaten eingeben.");
+      }
+      return parsed.origin;
+    }
+
+    async function requestSettings(method = "GET", body) {
+      const response = await fetch(apiBase + "/api/dashboard/settings", {
+        method,
+        headers: {
+          "x-dashboard-key": dashboardKey,
+          ...(body ? { "Content-Type": "application/json" } : {})
+        },
+        ...(body ? { body: JSON.stringify(body) } : {})
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const messages = {
+          401: "Schlüssel stimmt nicht.",
+          503: "Dashboard ist auf dem Bot-Server noch nicht eingerichtet."
+        };
+        throw new Error(messages[response.status] || data.error || "Verbindung fehlgeschlagen.");
+      }
+      return data;
+    }
+
+    function showSettings(data) {
+      document.querySelector("#linkEnabled").checked = data.linkEnabled;
+      document.querySelector("#codeExpiry").value = data.codeExpiryMinutes;
+      nicknameFormat.value = data.nicknameFormat;
+      updatePreview();
+    }
+
+    function updatePreview() {
+      document.querySelector("#preview").textContent =
+        "Vorschau: " + nicknameFormat.value.split("{name}").join("Alex").slice(0, 32);
+    }
+
+    connectButton.addEventListener("click", async () => {
+      setNotice("");
+      connectButton.disabled = true;
+      try {
+        apiBase = getApiBase();
+        dashboardKey = apiKeyInput.value;
+        if (!dashboardKey) throw new Error("Bitte den Dashboard-Schlüssel eingeben.");
+        const data = await requestSettings();
+        showSettings(data);
+        apiKeyInput.value = "";
+        setConnected(true);
+        setNotice("Verbunden. Du kannst die Einstellungen jetzt ändern.", "success");
+      } catch (error) {
+        dashboardKey = "";
+        apiBase = "";
+        setConnected(false);
+        setNotice(error.message || "Bot-API nicht erreichbar. Adresse und HTTPS-Verbindung prüfen.", "error");
+      } finally {
+        connectButton.disabled = false;
+      }
     });
-    const viewport = document.querySelector("#viewport");
-    const updateViewport = () => {
-      viewport.textContent = window.innerWidth < 640 ? "Mobil" : "Desktop";
-    };
-    updateViewport();
-    window.addEventListener("resize", updateViewport);
+
+    nicknameFormat.addEventListener("input", updatePreview);
+
+    settingsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setNotice("");
+      const saveButton = document.querySelector("#saveButton");
+      saveButton.disabled = true;
+      try {
+        const codeExpiryMinutes = Number(document.querySelector("#codeExpiry").value);
+        const format = nicknameFormat.value.trim();
+        if (!Number.isInteger(codeExpiryMinutes) || codeExpiryMinutes < 1 || codeExpiryMinutes > 1440) {
+          throw new Error("Die Code-Gültigkeit muss zwischen 1 und 1440 Minuten liegen.");
+        }
+        if (!format.includes("{name}")) {
+          throw new Error("Das Nickname-Format muss den Platzhalter {name} enthalten.");
+        }
+        await requestSettings("PUT", {
+          linkEnabled: document.querySelector("#linkEnabled").checked,
+          codeExpiryMinutes,
+          nicknameFormat: format
+        });
+        setNotice("Einstellungen gespeichert.", "success");
+      } catch (error) {
+        setNotice(error.message || "Speichern fehlgeschlagen.", "error");
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    document.querySelector("#disconnectButton").addEventListener("click", () => {
+      dashboardKey = "";
+      apiBase = "";
+      setConnected(false);
+      setNotice("Verbindung getrennt.");
+    });
   </script>
 </body>
 </html>
