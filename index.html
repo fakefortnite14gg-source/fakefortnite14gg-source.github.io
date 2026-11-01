@@ -57,14 +57,14 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
   <section class="card view active" id="bot-management-view" aria-labelledby="ticketTitle">
     <div class="card-head"><div><h2 id="ticketTitle">Ticket-Bot</h2><p class="section-copy">Support-Rolle, Ticket-Kategorie und Transkript-Kanal verwalten.</p></div><span class="tag">DISCORD SUPPORT</span></div>
     <div class="connection" id="connect">
-      <div><label for="ticketApiUrl">Ticket-API-Adresse</label><input id="ticketApiUrl" type="url" placeholder="https://tickets.example.de" autocomplete="url"><p class="hint">HTTPS-Adresse deines Ticket-Bots.</p></div>
+      <div><label for="ticketApiUrl">Ticket-API-Adresse</label><input id="ticketApiUrl" type="url" placeholder="https://goatbot.host-infinity.com" autocomplete="url"><p class="hint">HTTPS-Adresse deines Bots, z. B. https://goatbot.host-infinity.com.</p></div>
       <div><label for="ticketApiKey">Dashboard-Schlüssel</label><input id="ticketApiKey" type="password" autocomplete="off" placeholder="TICKET_DASHBOARD_API_KEY"><p class="hint">Nur beim ersten Verbinden nötig. Wird in diesem Browser gemerkt.</p></div>
       <button class="primary" id="ticketConnectButton" type="button">Verbinden</button>
     </div>
     <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
   </section>
   <section class="card view" id="ticket-settings" aria-labelledby="ticketSettingsTitle">
-    <div class="card-head"><div><h2 id="ticketSettingsTitle">Bot-Einstellungen</h2><p class="section-copy">Konfiguriere alle .env-Funktionen nach Bereichen.</p></div><span class="tag">EINSTELLUNGEN</span></div>
+    <div class="card-head"><div><h2 id="ticketSettingsTitle">Bot-Einstellungen</h2><p class="section-copy">Konfiguriere Kanäle, Rollen, Nachrichten und Bot-Funktionen nach Bereichen.</p></div><span class="tag">EINSTELLUNGEN</span></div>
     <div id="settingCategoryTabs" class="category-tabs" aria-label="Einstellungsbereiche"></div>
     <form id="ticketSettingsForm" class="settings locked">
       <div id="dynamicSettingsFields" class="setting-grid"></div>
