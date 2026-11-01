@@ -48,7 +48,7 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         <div class="field" id="category"><label for="ticketCategoryId">Ticket-Kategorie-ID</label><input id="ticketCategoryId" type="text" inputmode="numeric" placeholder="Optional"><p class="hint">Neue Tickets werden in dieser Kategorie erstellt.</p></div>
       </div>
       <div class="field" id="logs"><label for="ticketLogChannelId">Transkript-Kanal-ID</label><input id="ticketLogChannelId" type="text" inputmode="numeric" placeholder="Optional"><p class="hint">Beim Schließen wird das Transkript der letzten 100 Nachrichten hierhin gesendet. Leer lassen, um Transkripte auszuschalten.</p></div>
-      <div class="actions"><button class="primary" id="ticketSaveButton" type="submit">Einstellungen speichern</button><button class="secondary" id="ticketDisconnectButton" type="button">Verbindung trennen</button></div>
+      <div class="actions"><button class="primary" id="ticketSaveButton" type="submit">Einstellungen speichern</button></div>
     </form>
   </section>
 
@@ -156,14 +156,6 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
       } finally {
         saveButton.disabled = false;
       }
-    });
-
-    document.querySelector("#ticketDisconnectButton").addEventListener("click", () => {
-      ticketApiBase = "";
-      ticketDashboardKey = "";
-      try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
-      ticketSettingsForm.classList.add("locked");
-      setTicketNotice("Verbindung getrennt und gespeicherten Schlüssel gelöscht.");
     });
 
     async function restoreTicketConnection() {
