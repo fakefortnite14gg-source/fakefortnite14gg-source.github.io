@@ -23,6 +23,15 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 .activity-item a{color:var(--text);text-decoration:none}.activity-item a:hover{text-decoration:underline}.activity-time{color:var(--muted);font-size:11px;white-space:nowrap}
 @media(max-width:780px){.activity-item{align-items:flex-start;flex-direction:column}.activity .card-head{align-items:flex-start;flex-direction:column}}
 @media(max-width:780px){.sidebar{position:relative;width:100%;height:auto;padding:10px 12px}.server{height:48px}.nav{display:flex;overflow:auto;gap:5px;padding:7px 0 10px}.nav a{white-space:nowrap;min-height:38px;margin:0}.nav-heading,.nav-divider{display:none}.lang{display:none}.workspace{margin:0;padding:25px 16px}.connection{grid-template-columns:1fr}.connection button{width:100%}.setting-grid,.info-grid{grid-template-columns:1fr}.topbar{margin-bottom:18px}.card{padding:18px}}
+
+.team-groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.team-group{border:1px solid #292a2f;background:#17181c;border-radius:14px;padding:15px}
+.team-group h3{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;font-size:15px}
+.team-count{padding:2px 8px;border-radius:999px;background:#27282d;color:var(--muted);font-size:11px}
+.team-members{display:grid;gap:8px;list-style:none;padding:0;margin:0}
+.team-member{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:#111214}
+.team-member strong{font-size:13px}.team-member small{display:block;color:var(--muted);font-size:11px}
+.team-empty{color:var(--muted);font-size:12px;padding:8px}
 </style>
 </head>
 <body>
@@ -31,7 +40,9 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
   <div class="server"><div class="server-logo">t</div><div><div class="server-name">test server</div><div class="plan">Discord Ticket-Bot</div></div></div>
   <nav class="nav" aria-label="Bot-Verwaltung">
     <a class="active" href="#bot-management-view" data-view="bot-management-view"><span class="ico">▦</span>Bot-Verwaltung</a>
-    <div class="nav-divider"></div><a href="#ticket-settings" data-view="ticket-settings"><span class="ico">▣</span>Ticket-Einstellungen</a>
+    <div class="nav-divider"></div>
+    <a href="#ticket-settings" data-view="ticket-settings"><span class="ico">▣</span>Ticket-Einstellungen</a>
+    <a href="#team-list" data-view="team-list"><span class="ico">♧</span>Team-Liste</a>
   </nav>
   <div class="lang">🇩🇪 &nbsp; Deutsch</div>
 </aside>
@@ -64,6 +75,23 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
       <div id="ticketActivityStatus" class="activity-status" role="status" aria-live="polite">Verbinde den Bot, um das Protokoll zu laden.</div>
       <ul id="ticketActivityList" class="activity-list"></ul>
     </div>
+  </section>
+
+<section class="card view" id="team-list" aria-labelledby="teamTitle">
+    <div class="card-head"><div><h2 id="teamTitle">Team-Liste</h2><p class="section-copy">Mitglieder aus den Discord-Rollen Teamleitung und Team.</p></div><span class="tag">TEAM</span></div>
+    <form id="teamRoleForm" class="settings locked">
+      <div class="setting-grid">
+        <div class="field"><label for="teamLeadRoleId">Teamleitungs-Rollen-ID</label><input id="teamLeadRoleId" type="text" inputmode="numeric" placeholder="Discord-Rollen-ID"></div>
+        <div class="field"><label for="teamRoleId">Allgemeine Team-Rollen-ID</label><input id="teamRoleId" type="text" inputmode="numeric" placeholder="Discord-Rollen-ID"></div>
+      </div>
+      <div class="actions"><button class="primary" id="teamRolesSave" type="submit">Teamrollen speichern</button></div>
+      <p class="notice" id="teamRoleNotice" role="status" aria-live="polite"></p>
+    </form>
+    <div class="team-groups">
+      <section class="team-group"><h3>Teamleitung <span id="teamLeadCount" class="team-count">0</span></h3><ul id="teamLeadMembers" class="team-members"></ul></section>
+      <section class="team-group"><h3>Team <span id="teamCount" class="team-count">0</span></h3><ul id="teamMembers" class="team-members"></ul></section>
+    </div>
+    <p class="notice" id="teamListStatus" role="status" aria-live="polite">Verbinde den Bot, um die Team-Liste zu laden.</p>
   </section>
 
 </div></main>
