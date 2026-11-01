@@ -1,44 +1,100 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>Meine Webseite</title>
-
-    <style>
-        body {
-            background: #111827;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 80px 20px;
-        }
-
-        h1 {
-            color: #60a5fa;
-        }
-
-        p {
-            font-size: 18px;
-        }
-
-        a {
-            color: #93c5fd;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>Testseite · GitHub Pages</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: rgba(18, 27, 50, .78);
+      --text: #f4f7ff;
+      --muted: #9caac7;
+      --line: rgba(166, 190, 255, .15);
+      --accent: #8b9cff;
+      --mint: #75e0c1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px;
+      display: grid;
+      place-items: center;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 18% 12%, rgba(71, 92, 184, .28), transparent 38%),
+        radial-gradient(ellipse at 84% 82%, rgba(32, 149, 132, .17), transparent 35%),
+        var(--bg);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { width: min(100%, 880px); }
+    .topline { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:24px; }
+    .brand { color: var(--muted); font-size: .9rem; letter-spacing: .08em; text-transform: uppercase; }
+    .status { display:inline-flex; align-items:center; gap:8px; color:var(--mint); font-size:.85rem; }
+    .dot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 14px currentColor; }
+    .hero, .card { border:1px solid var(--line); background:var(--panel); backdrop-filter:blur(12px); border-radius:24px; }
+    .hero { padding:clamp(28px, 6vw, 64px); position:relative; overflow:hidden; }
+    .hero::after { content:""; position:absolute; width:230px; height:230px; border:1px solid rgba(139,156,255,.18); border-radius:50%; right:-80px; top:-100px; box-shadow:0 0 0 28px rgba(139,156,255,.035), 0 0 0 58px rgba(139,156,255,.025); pointer-events:none; }
+    .eyebrow { color:var(--accent); font-weight:650; font-size:.85rem; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { max-width:650px; margin:14px 0; font-size:clamp(2.5rem, 7vw, 5rem); line-height:1.02; letter-spacing:-.055em; }
+    .intro { max-width:570px; color:var(--muted); font-size:1.1rem; }
+    .actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:28px; }
+    button, .link { border:0; border-radius:12px; padding:12px 17px; font:inherit; font-weight:650; text-decoration:none; cursor:pointer; }
+    button { color:#10152a; background:linear-gradient(135deg, #aebaff, #78e3cb); box-shadow:0 8px 28px rgba(117,224,193,.15); }
+    button:hover { transform:translateY(-1px); filter:brightness(1.06); }
+    button:focus-visible, a:focus-visible { outline:3px solid #fff; outline-offset:3px; }
+    .link { color:var(--text); border:1px solid var(--line); background:rgba(255,255,255,.035); }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px; }
+    .card { padding:20px; }
+    .label { color:var(--muted); font-size:.86rem; }
+    .value { margin-top:6px; font-size:1.15rem; font-weight:700; }
+    .count { color:var(--mint); font-variant-numeric:tabular-nums; }
+    footer { margin:18px 4px 0; color:var(--muted); font-size:.84rem; text-align:center; }
+    @media (max-width:640px) { body { padding:16px; } .topline { align-items:flex-start; flex-direction:column; } .grid { grid-template-columns:1fr; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; } }
+  </style>
 </head>
 <body>
+  <main>
+    <div class="topline">
+      <div class="brand">Dein kleines Web-Experiment</div>
+      <div class="status"><span class="dot"></span> Alles bereit</div>
+    </div>
 
-    <h1>Willkommen auf meiner Webseite!</h1>
+    <section class="hero">
+      <div class="eyebrow">GitHub Pages · Testlauf</div>
+      <h1>Hallo Welt<span style="color:var(--accent)">.</span></h1>
+      <p class="intro">Diese Seite ist live im Web. Probier den Button aus und schau, wie sich der Zähler verändert.</p>
+      <div class="actions">
+        <button id="countButton" type="button">Button testen <span aria-hidden="true">→</span></button>
+        <a class="link" href="https://github.com/fakefortnite14gg-source/fakefortnite14gg-source.github.io">Zum GitHub-Repository ↗</a>
+      </div>
+    </section>
 
-    <p>Meine erste Webseite mit GitHub Pages.</p>
+    <section class="grid" aria-label="Seitenstatus">
+      <div class="card"><div class="label">Veröffentlichung</div><div class="value">GitHub Pages</div></div>
+      <div class="card"><div class="label">Interaktion</div><div class="value">Klicks: <span class="count" id="count" aria-live="polite">0</span></div></div>
+      <div class="card"><div class="label">Ansicht</div><div class="value" id="viewport">Wird erkannt …</div></div>
+    </section>
 
-    <a href="https://github.com/">
-        GitHub besuchen
-    </a>
-
+    <footer>Eine schlichte Testseite · gebaut mit HTML, CSS und JavaScript</footer>
+  </main>
+  <script>
+    let clicks = 0;
+    const count = document.querySelector("#count");
+    document.querySelector("#countButton").addEventListener("click", () => {
+      clicks += 1;
+      count.textContent = clicks;
+    });
+    const viewport = document.querySelector("#viewport");
+    const updateViewport = () => {
+      viewport.textContent = window.innerWidth < 640 ? "Mobil" : "Desktop";
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+  </script>
 </body>
 </html>
