@@ -133,7 +133,7 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
           401: "Dashboard-Schlüssel stimmt nicht.",
           503: "Ticket-Dashboard ist auf dem Bot-Server noch nicht eingerichtet."
         };
-        throw new Error(messages[response.status] || data.error || "Verbindung fehlgeschlagen.");
+        throw new Error(messages[response.status] || data.message || data.error || "Verbindung fehlgeschlagen.");
       }
       return data;
     }
@@ -178,6 +178,75 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 
     document.querySelector("#ticketLogRefresh").addEventListener("click", loadTicketLogs);
 
+    async function loadTeamRoster() {
+      const status = document.querySelector("#teamListStatus");
+      try {
+        const data = await ticketRequest("GET", undefined, "/api/ticket-dashboard/team");
+        document.querySelector("#teamLeadRoleId").value = data.teamLeadRoleId || "";
+        document.querySelector("#teamRoleId").value = data.teamRoleId || "";
+        const fillGroup = (listId, countId, people, roleId) => {
+          const list = document.querySelector(listId);
+          list.replaceChildren();
+          const members = Array.isArray(people) ? people : [];
+          document.querySelector(countId).textContent = String(members.length);
+          if (!roleId || !members.length) {
+            const empty = document.createElement("li");
+            empty.className = "team-empty";
+            empty.textContent = !roleId ? "Rollen-ID noch nicht festgelegt." : "Keine Mitglieder mit dieser Rolle gefunden.";
+            list.append(empty);
+            return;
+          }
+          for (const member of members) {
+            const item = document.createElement("li");
+            item.className = "team-member";
+            const text = document.createElement("div");
+            const name = document.createElement("strong");
+            name.textContent = member.displayName || member.username || "Discord-Mitglied";
+            const username = document.createElement("small");
+            username.textContent = "@" + (member.username || "unbekannt");
+            text.append(name, username);
+            item.append(text);
+            list.append(item);
+          }
+        };
+        fillGroup("#teamLeadMembers", "#teamLeadCount", data.teamLeads, data.teamLeadRoleId);
+        fillGroup("#teamMembers", "#teamCount", data.teamMembers, data.teamRoleId);
+        status.textContent = "Team-Liste aus Discord geladen.";
+      } catch (error) {
+        status.textContent = error.message || "Team-Liste konnte nicht geladen werden.";
+      }
+    }
+
+    document.querySelector("#teamRoleForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const notice = document.querySelector("#teamRoleNotice");
+      const save = document.querySelector("#teamRolesSave");
+      const teamLeadRoleId = document.querySelector("#teamLeadRoleId").value.trim();
+      const teamRoleId = document.querySelector("#teamRoleId").value.trim();
+      const idPattern = new RegExp("^[0-9]{17,20}$");
+      if ((teamLeadRoleId && !idPattern.test(teamLeadRoleId)) || (teamRoleId && !idPattern.test(teamRoleId))) {
+        notice.textContent = "Bitte vollständige Discord-Rollen-IDs aus Zahlen eingeben.";
+        notice.className = "notice error";
+        return;
+      }
+      notice.textContent = "Speichere Teamrollen …";
+      notice.className = "notice";
+      save.disabled = true;
+      try {
+        const result = await ticketRequest("PUT", { teamLeadRoleId, teamRoleId });
+        notice.textContent = "Teamrollen gespeichert.";
+        notice.className = "notice success";
+        document.querySelector("#teamLeadRoleId").value = result.settings.teamLeadRoleId || "";
+        document.querySelector("#teamRoleId").value = result.settings.teamRoleId || "";
+        await loadTeamRoster();
+      } catch (error) {
+        notice.textContent = error.message || "Teamrollen konnten nicht gespeichert werden.";
+        notice.className = "notice error";
+      } finally {
+        save.disabled = false;
+      }
+    });
+
     ticketConnectButton.addEventListener("click", async () => {
       setTicketNotice("");
       ticketConnectButton.disabled = true;
@@ -189,8 +258,11 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         document.querySelector("#supportRoleId").value = data.supportRoleId || "";
         document.querySelector("#ticketCategoryId").value = data.categoryId || "";
         document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
+        document.querySelector("#teamLeadRoleId").value = data.teamLeadRoleId || "";
+        document.querySelector("#teamRoleId").value = data.teamRoleId || "";
         ticketApiKeyInput.value = "";
         ticketSettingsForm.classList.remove("locked");
+        document.querySelector("#teamRoleForm").classList.remove("locked");
         try {
           localStorage.setItem("ticketDashboardConnection", JSON.stringify({
             apiBase: ticketApiBase,
@@ -205,6 +277,7 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         ticketApiBase = "";
         ticketDashboardKey = "";
         ticketSettingsForm.classList.add("locked");
+        document.querySelector("#teamRoleForm").classList.add("locked");
         setTicketNotice(error.message || "Ticket-Bot nicht erreichbar. Adresse und HTTPS-Verbindung prüfen.", "error");
       } finally {
         ticketConnectButton.disabled = false;
@@ -258,7 +331,10 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         document.querySelector("#supportRoleId").value = data.supportRoleId || "";
         document.querySelector("#ticketCategoryId").value = data.categoryId || "";
         document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
+        document.querySelector("#teamLeadRoleId").value = data.teamLeadRoleId || "";
+        document.querySelector("#teamRoleId").value = data.teamRoleId || "";
         ticketSettingsForm.classList.remove("locked");
+        document.querySelector("#teamRoleForm").classList.remove("locked");
         setTicketNotice("Ticket-Bot automatisch verbunden. Du kannst alle Ticket-Einstellungen ändern.", "success");
         loadTicketLogs();
       } catch {
@@ -276,12 +352,14 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         const target = link.dataset.view;
         document.querySelectorAll(".nav [data-view]").forEach((item) => item.classList.toggle("active", item === link));
         document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === target));
-        document.querySelector("#pageTitle").textContent = target === "ticket-settings" ? "Ticket-Einstellungen" : "Bot-Verwaltung";
+        document.querySelector("#pageTitle").textContent = target === "ticket-settings" ? "Ticket-Einstellungen" : target === "team-list" ? "Team-Liste" : "Bot-Verwaltung";
+        if (target === "team-list") loadTeamRoster();
         history.replaceState(null, "", "#" + target);
       });
     });
-    const initialView = location.hash === "#ticket-settings" ? "ticket-settings" : "bot-management-view";
-    if (initialView === "ticket-settings") document.querySelector('.nav [data-view="ticket-settings"]').click();
+    const initialView = location.hash === "#ticket-settings" ? "ticket-settings" : location.hash === "#team-list" ? "team-list" : "bot-management-view";
+    const initialLink = [...document.querySelectorAll(".nav [data-view]")].find(link => link.dataset.view === initialView);
+    if (initialLink && initialView !== "bot-management-view") initialLink.click();
 
     restoreTicketConnection();
     setInterval(() => {
