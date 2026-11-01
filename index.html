@@ -25,13 +25,8 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
   <div class="server"><div class="server-logo">t</div><div><div class="server-name">test server</div><div class="plan">Discord Ticket-Bot</div></div></div>
   <nav class="nav">
     <a class="active" href="#dashboard"><span class="ico">▦</span>Dashboard</a>
-    <a href="#ticket-bot"><span class="ico">♧</span>Ticket-Bot</a>
-    <div class="nav-divider"></div><div class="nav-heading">Ticket-Verwaltung</div>
-    <a href="#support"><span class="ico">♙</span>Support-Rolle</a>
-    <a href="#category"><span class="ico">▤</span>Ticket-Kategorie</a>
-    <a href="#logs"><span class="ico">▣</span>Transkript-Kanal</a>
-    <div class="nav-heading">Verbindung</div>
-    <a href="#connect"><span class="ico">⌁</span>Bot verbinden</a>
+    <div class="nav-divider"></div><div class="nav-heading">Bot-Verwaltung</div>
+    <a href="#ticket-settings"><span class="ico">▣</span>Ticket-Einstellungen</a>
   </nav>
   <div class="lang">🇩🇪 &nbsp; Deutsch</div>
 </aside>
@@ -47,7 +42,7 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
     </div>
     <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
   </section>
-  <section class="card" aria-labelledby="ticketSettingsTitle">
+  <section class="card" id="ticket-settings" aria-labelledby="ticketSettingsTitle">
     <div class="card-head"><div><h2 id="ticketSettingsTitle">Ticket-Einstellungen</h2><p class="section-copy">Änderungen werden direkt an deinen Bot übertragen.</p></div><span class="tag">EINSTELLUNGEN</span></div>
     <form id="ticketSettingsForm" class="settings locked">
       <div class="setting-grid">
