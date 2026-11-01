@@ -118,7 +118,7 @@
         <div>
           <label for="ticketApiKey">Dashboard-Schlüssel</label>
           <input id="ticketApiKey" type="password" autocomplete="off" placeholder="TICKET_DASHBOARD_API_KEY">
-          <p class="hint">Wird nur in diesem Browser-Tab gehalten.</p>
+          <p class="hint">Wird in diesem Browser gespeichert, nicht in GitHub. Auf gemeinsam genutzten Geräten danach trennen.</p>
         </div>
         <button class="primary" id="ticketConnectButton" type="button">Verbinden</button>
       </div>
@@ -331,7 +331,15 @@
         document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
         ticketApiKeyInput.value = "";
         ticketSettingsForm.classList.remove("locked");
-        setTicketNotice("Ticket-Bot verbunden. Du kannst die Discord-IDs jetzt einstellen.", "success");
+        try {
+          localStorage.setItem("ticketDashboardConnection", JSON.stringify({
+            apiBase: ticketApiBase,
+            key: ticketDashboardKey
+          }));
+          setTicketNotice("Verbunden und auf diesem Gerät gemerkt. Du kannst die Ticket-Einstellungen ändern.", "success");
+        } catch {
+          setTicketNotice("Verbunden, aber dein Browser konnte die Verbindung nicht speichern. Bei gemeinsam genutzten Geräten nachher trennen.", "error");
+        }
       } catch (error) {
         ticketApiBase = "";
         ticketDashboardKey = "";
@@ -375,9 +383,40 @@
     document.querySelector("#ticketDisconnectButton").addEventListener("click", () => {
       ticketApiBase = "";
       ticketDashboardKey = "";
+      try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
       ticketSettingsForm.classList.add("locked");
-      setTicketNotice("Ticket-Bot-Verbindung getrennt.");
+      setTicketNotice("Verbindung getrennt und gespeicherten Schlüssel gelöscht.");
     });
+
+    async function restoreTicketConnection() {
+      let saved;
+      try {
+        saved = JSON.parse(localStorage.getItem("ticketDashboardConnection") || "null");
+      } catch {
+        localStorage.removeItem("ticketDashboardConnection");
+      }
+      if (!saved?.apiBase || !saved?.key) return;
+
+      ticketApiBase = saved.apiBase;
+      ticketDashboardKey = saved.key;
+      ticketApiUrlInput.value = saved.apiBase;
+      try {
+        const data = await ticketRequest();
+        document.querySelector("#supportRoleId").value = data.supportRoleId || "";
+        document.querySelector("#ticketCategoryId").value = data.categoryId || "";
+        document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
+        ticketSettingsForm.classList.remove("locked");
+        setTicketNotice("Ticket-Bot automatisch verbunden. Du kannst alle Ticket-Einstellungen ändern.", "success");
+      } catch {
+        ticketApiBase = "";
+        ticketDashboardKey = "";
+        try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
+        ticketSettingsForm.classList.add("locked");
+        setTicketNotice("Gespeicherte Verbindung ungültig oder Bot nicht erreichbar. Bitte erneut verbinden.", "error");
+      }
+    }
+
+    restoreTicketConnection();
 
   </script>
 </body>
