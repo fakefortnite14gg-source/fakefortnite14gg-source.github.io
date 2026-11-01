@@ -104,6 +104,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     let settingValues = {};
     let activeCategory = "";
     let activeView = "bot-management-view";
+    const defaultSettingsCategories = ["Tickets", "Bewerbungen", "Verifizierung", "Unmute", "Rollen", "Community", "Berechtigungen", "Team"];
 
     function setTicketNotice(message, kind = "") {
       ticketNotice.textContent = message;
@@ -141,7 +142,8 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     function renderSettings(data) {
       settingFields = Array.isArray(data.fields) ? data.fields : [];
       settingValues = data.values || {};
-      const categories = [...new Set(settingFields.map(item => item.category))];
+      const apiCategories = [...new Set(settingFields.map(item => item.category))];
+      const categories = apiCategories.length ? apiCategories : defaultSettingsCategories;
       if (!categories.includes(activeCategory)) activeCategory = categories[0] || "";
       const tabs = document.querySelector("#settingCategoryTabs");
       tabs.replaceChildren();
@@ -159,6 +161,13 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
 
       const container = document.querySelector("#dynamicSettingsFields");
       container.replaceChildren();
+      if (!settingFields.length) {
+        const empty = document.createElement("div");
+        empty.className = "field";
+        empty.style.gridColumn = "1 / -1";
+        empty.textContent = "Die Bot-API liefert noch keine Einstellungen. Lade die aktuelle index.js auf den Bot-Server und starte ihn neu.";
+        container.append(empty);
+      }
       for (const item of settingFields.filter(field => field.category === activeCategory)) {
         const wrapper = document.createElement("div");
         wrapper.className = "field";
@@ -198,6 +207,12 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     async function loadSettings() {
       const data = await ticketRequest();
       renderSettings(data);
+      if (!settingFields.length) {
+        ticketSettingsForm.classList.add("locked");
+        document.querySelector("#settingNotice").textContent = "Die verbundene Bot-API hat noch kein kategorisiertes Einstellungs-Schema. Aktualisiere die Bot-index.js und starte den Bot neu.";
+        document.querySelector("#settingNotice").className = "notice error";
+        return;
+      }
       ticketSettingsForm.classList.remove("locked");
       document.querySelector("#settingNotice").textContent = "Einstellungen geladen. Wähle oben einen Bereich.";
       document.querySelector("#settingNotice").className = "notice success";
@@ -387,6 +402,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     const initialLink = [...document.querySelectorAll(".nav [data-view]")].find(link => link.dataset.view === initialView);
     if (initialLink && initialView !== "bot-management-view") initialLink.click();
 
+    renderSettings({ fields: [], values: {} });
     restoreTicketConnection();
     setInterval(() => {
       if (ticketApiBase && ticketDashboardKey) {
