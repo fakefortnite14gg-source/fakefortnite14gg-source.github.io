@@ -33,6 +33,11 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 .team-member strong{font-size:13px}.team-member small{display:block;color:var(--muted);font-size:11px}
 .team-empty{color:var(--muted);font-size:12px;padding:8px}
 @media(max-width:780px){.team-groups{grid-template-columns:1fr}}
+
+.category-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+.category-tab{min-height:36px;padding:7px 12px;border:1px solid #303137;border-radius:999px;color:var(--muted);background:#17181c;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.category-tab.active{border-color:#6471aa;color:#fff;background:#242737}
+textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit;resize:vertical}
 </style>
 </head>
 <body>
@@ -59,18 +64,16 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
     <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
   </section>
   <section class="card view" id="ticket-settings" aria-labelledby="ticketSettingsTitle">
-    <div class="card-head"><div><h2 id="ticketSettingsTitle">Ticket-Einstellungen</h2><p class="section-copy">Änderungen werden direkt an deinen Bot übertragen.</p></div><span class="tag">EINSTELLUNGEN</span></div>
+    <div class="card-head"><div><h2 id="ticketSettingsTitle">Bot-Einstellungen</h2><p class="section-copy">Konfiguriere alle .env-Funktionen nach Bereichen.</p></div><span class="tag">EINSTELLUNGEN</span></div>
+    <div id="settingCategoryTabs" class="category-tabs" aria-label="Einstellungsbereiche"></div>
     <form id="ticketSettingsForm" class="settings locked">
-      <div class="setting-grid">
-        <div class="field" id="support"><label for="supportRoleId">Support-Rollen-ID</label><input id="supportRoleId" type="text" inputmode="numeric" placeholder="Optional"><p class="hint">Diese Rolle darf Tickets sehen und verwalten. Wird auch auf offene Tickets angewendet.</p></div>
-        <div class="field" id="category"><label for="ticketCategoryId">Ticket-Kategorie-ID</label><input id="ticketCategoryId" type="text" inputmode="numeric" placeholder="Optional"><p class="hint">Neue Tickets werden in dieser Kategorie erstellt.</p></div>
-      </div>
-      <div class="field" id="logs"><label for="ticketLogChannelId">Transkript-Kanal-ID</label><input id="ticketLogChannelId" type="text" inputmode="numeric" placeholder="Optional"><p class="hint">Beim Schließen wird das Transkript der letzten 100 Nachrichten hierhin gesendet. Leer lassen, um Transkripte auszuschalten.</p></div>
+      <div id="dynamicSettingsFields" class="setting-grid"></div>
       <div class="actions"><button class="primary" id="ticketSaveButton" type="submit">Einstellungen speichern</button></div>
+      <p class="notice" id="settingNotice" role="status" aria-live="polite">Verbinde zuerst deinen Bot.</p>
     </form>
     <div class="activity" id="ticketActivity" aria-labelledby="ticketActivityTitle">
       <div class="card-head">
-        <div><h2 id="ticketActivityTitle">Ticket-Protokoll</h2><p class="section-copy">Neu erstellte Tickets erscheinen hier automatisch.</p></div>
+        <div><h2 id="ticketActivityTitle">Ticket-Protokoll</h2><p class="section-copy">Neue Tickets und Bewerbungen erscheinen hier automatisch.</p></div>
         <button class="secondary" id="ticketLogRefresh" type="button">Aktualisieren</button>
       </div>
       <div id="ticketActivityStatus" class="activity-status" role="status" aria-live="polite">Verbinde den Bot, um das Protokoll zu laden.</div>
@@ -78,16 +81,8 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
     </div>
   </section>
 
-<section class="card view" id="team-list" aria-labelledby="teamTitle">
-    <div class="card-head"><div><h2 id="teamTitle">Team-Liste</h2><p class="section-copy">Mitglieder aus den Discord-Rollen Teamleitung und Team.</p></div><span class="tag">TEAM</span></div>
-    <form id="teamRoleForm" class="settings locked">
-      <div class="setting-grid">
-        <div class="field"><label for="teamLeadRoleId">Teamleitungs-Rollen-ID</label><input id="teamLeadRoleId" type="text" inputmode="numeric" placeholder="Discord-Rollen-ID"></div>
-        <div class="field"><label for="teamRoleId">Allgemeine Team-Rollen-ID</label><input id="teamRoleId" type="text" inputmode="numeric" placeholder="Discord-Rollen-ID"></div>
-      </div>
-      <div class="actions"><button class="primary" id="teamRolesSave" type="submit">Teamrollen speichern</button></div>
-      <p class="notice" id="teamRoleNotice" role="status" aria-live="polite"></p>
-    </form>
+  <section class="card view" id="team-list" aria-labelledby="teamTitle">
+    <div class="card-head"><div><h2 id="teamTitle">Team-Liste</h2><p class="section-copy">Mitglieder nach Teamleitungs-Rolle und allgemeiner Team-Rolle.</p></div><span class="tag">TEAM</span></div>
     <div class="team-groups">
       <section class="team-group"><h3>Teamleitung <span id="teamLeadCount" class="team-count">0</span></h3><ul id="teamLeadMembers" class="team-members"></ul></section>
       <section class="team-group"><h3>Team <span id="teamCount" class="team-count">0</span></h3><ul id="teamMembers" class="team-members"></ul></section>
@@ -105,6 +100,10 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
     const ticketNotice = document.querySelector("#ticketNotice");
     let ticketApiBase = "";
     let ticketDashboardKey = "";
+    let settingFields = [];
+    let settingValues = {};
+    let activeCategory = "";
+    let activeView = "bot-management-view";
 
     function setTicketNotice(message, kind = "") {
       ticketNotice.textContent = message;
@@ -132,11 +131,77 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
       if (!response.ok) {
         const messages = {
           401: "Dashboard-Schlüssel stimmt nicht.",
-          503: "Ticket-Dashboard ist auf dem Bot-Server noch nicht eingerichtet."
+          503: "Dashboard-API ist auf dem Bot-Server noch nicht eingerichtet."
         };
         throw new Error(messages[response.status] || data.message || data.error || "Verbindung fehlgeschlagen.");
       }
       return data;
+    }
+
+    function renderSettings(data) {
+      settingFields = Array.isArray(data.fields) ? data.fields : [];
+      settingValues = data.values || {};
+      const categories = [...new Set(settingFields.map(item => item.category))];
+      if (!categories.includes(activeCategory)) activeCategory = categories[0] || "";
+      const tabs = document.querySelector("#settingCategoryTabs");
+      tabs.replaceChildren();
+      for (const category of categories) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "category-tab" + (category === activeCategory ? " active" : "");
+        button.textContent = category;
+        button.addEventListener("click", () => {
+          activeCategory = category;
+          renderSettings({ fields: settingFields, values: settingValues });
+        });
+        tabs.append(button);
+      }
+
+      const container = document.querySelector("#dynamicSettingsFields");
+      container.replaceChildren();
+      for (const item of settingFields.filter(field => field.category === activeCategory)) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+        const label = document.createElement("label");
+        const id = "dashboard-field-" + item.key;
+        label.htmlFor = id;
+        label.textContent = item.label;
+        let input;
+        if (item.type === "textarea") {
+          input = document.createElement("textarea");
+          input.rows = 4;
+        } else {
+          input = document.createElement("input");
+          input.type = item.type === "number" ? "number" : "text";
+          if (["role", "channel", "category"].includes(item.type)) input.inputMode = "numeric";
+        }
+        input.id = id;
+        input.dataset.settingKey = item.key;
+        input.value = settingValues[item.key] ?? "";
+        if (item.type === "number") {
+          input.min = "0";
+          input.max = "10080";
+          input.step = "1";
+        }
+        if (["role", "channel", "category"].includes(item.type)) input.placeholder = "Discord-ID oder leer lassen";
+        wrapper.append(label, input);
+        if (item.hint) {
+          const hint = document.createElement("p");
+          hint.className = "hint";
+          hint.textContent = item.hint;
+          wrapper.append(hint);
+        }
+        container.append(wrapper);
+      }
+    }
+
+    async function loadSettings() {
+      const data = await ticketRequest();
+      renderSettings(data);
+      ticketSettingsForm.classList.remove("locked");
+      document.querySelector("#settingNotice").textContent = "Einstellungen geladen. Wähle oben einen Bereich.";
+      document.querySelector("#settingNotice").className = "notice success";
+      if (activeView === "team-list") loadTeamRoster();
     }
 
     async function loadTicketLogs() {
@@ -146,10 +211,10 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         const data = await ticketRequest("GET", undefined, "/api/ticket-dashboard/logs");
         list.replaceChildren();
         if (!Array.isArray(data.logs) || data.logs.length === 0) {
-          status.textContent = "Noch keine Tickets erstellt.";
+          status.textContent = "Noch keine Tickets oder Bewerbungen erstellt.";
           return;
         }
-        status.textContent = data.logs.length + " letzte Ticket-Erstellungen.";
+        status.textContent = data.logs.length + " letzte Aktivitäten.";
         for (const log of data.logs) {
           const item = document.createElement("li");
           item.className = "activity-item";
@@ -162,7 +227,7 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
           channelLink.textContent = "#" + (log.channelName || "ticket");
           name.append(channelLink);
           const meta = document.createElement("small");
-          meta.textContent = "Erstellt von " + (log.username || "Unbekannt");
+          meta.textContent = (log.type === "application_created" ? "Bewerbung" : "Ticket") + (log.label ? " · " + log.label : "") + " · erstellt von " + (log.username || "Unbekannt");
           details.append(name, meta);
           const time = document.createElement("time");
           time.className = "activity-time";
@@ -173,80 +238,46 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
           list.append(item);
         }
       } catch (error) {
-        status.textContent = error.message || "Ticket-Protokoll konnte nicht geladen werden.";
+        status.textContent = error.message || "Protokoll konnte nicht geladen werden.";
       }
     }
 
-    document.querySelector("#ticketLogRefresh").addEventListener("click", loadTicketLogs);
-
     async function loadTeamRoster() {
       const status = document.querySelector("#teamListStatus");
+      const fill = (listId, countId, people) => {
+        const list = document.querySelector(listId);
+        list.replaceChildren();
+        const members = Array.isArray(people) ? people : [];
+        document.querySelector(countId).textContent = String(members.length);
+        if (!members.length) {
+          const item = document.createElement("li");
+          item.className = "team-empty";
+          item.textContent = "Keine Mitglieder mit dieser Rolle gefunden.";
+          list.append(item);
+          return;
+        }
+        for (const member of members) {
+          const item = document.createElement("li");
+          item.className = "team-member";
+          const text = document.createElement("div");
+          const name = document.createElement("strong");
+          name.textContent = member.displayName || member.username || "Discord-Mitglied";
+          const username = document.createElement("small");
+          username.textContent = "@" + (member.username || "unbekannt");
+          text.append(name, username);
+          item.append(text);
+          list.append(item);
+        }
+      };
       try {
         const data = await ticketRequest("GET", undefined, "/api/ticket-dashboard/team");
-        document.querySelector("#teamLeadRoleId").value = data.teamLeadRoleId || "";
-        document.querySelector("#teamRoleId").value = data.teamRoleId || "";
-        const fillGroup = (listId, countId, people, roleId) => {
-          const list = document.querySelector(listId);
-          list.replaceChildren();
-          const members = Array.isArray(people) ? people : [];
-          document.querySelector(countId).textContent = String(members.length);
-          if (!roleId || !members.length) {
-            const empty = document.createElement("li");
-            empty.className = "team-empty";
-            empty.textContent = !roleId ? "Rollen-ID noch nicht festgelegt." : "Keine Mitglieder mit dieser Rolle gefunden.";
-            list.append(empty);
-            return;
-          }
-          for (const member of members) {
-            const item = document.createElement("li");
-            item.className = "team-member";
-            const text = document.createElement("div");
-            const name = document.createElement("strong");
-            name.textContent = member.displayName || member.username || "Discord-Mitglied";
-            const username = document.createElement("small");
-            username.textContent = "@" + (member.username || "unbekannt");
-            text.append(name, username);
-            item.append(text);
-            list.append(item);
-          }
-        };
-        fillGroup("#teamLeadMembers", "#teamLeadCount", data.teamLeads, data.teamLeadRoleId);
-        fillGroup("#teamMembers", "#teamCount", data.teamMembers, data.teamRoleId);
-        status.textContent = "Team-Liste aus Discord geladen.";
+        fill("#teamLeadMembers", "#teamLeadCount", data.teamLeads);
+        fill("#teamMembers", "#teamCount", data.teamMembers);
+        status.textContent = "Team-Liste aus Discord geladen. Rollen-IDs kannst du im Bereich Team einstellen.";
       } catch (error) {
         status.textContent = error.message || "Team-Liste konnte nicht geladen werden.";
       }
     }
-
-    document.querySelector("#teamRoleForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const notice = document.querySelector("#teamRoleNotice");
-      const save = document.querySelector("#teamRolesSave");
-      const teamLeadRoleId = document.querySelector("#teamLeadRoleId").value.trim();
-      const teamRoleId = document.querySelector("#teamRoleId").value.trim();
-      const idPattern = new RegExp("^[0-9]{17,20}$");
-      if ((teamLeadRoleId && !idPattern.test(teamLeadRoleId)) || (teamRoleId && !idPattern.test(teamRoleId))) {
-        notice.textContent = "Bitte vollständige Discord-Rollen-IDs aus Zahlen eingeben.";
-        notice.className = "notice error";
-        return;
-      }
-      notice.textContent = "Speichere Teamrollen …";
-      notice.className = "notice";
-      save.disabled = true;
-      try {
-        const result = await ticketRequest("PUT", { teamLeadRoleId, teamRoleId });
-        notice.textContent = "Teamrollen gespeichert.";
-        notice.className = "notice success";
-        document.querySelector("#teamLeadRoleId").value = result.settings.teamLeadRoleId || "";
-        document.querySelector("#teamRoleId").value = result.settings.teamRoleId || "";
-        await loadTeamRoster();
-      } catch (error) {
-        notice.textContent = error.message || "Teamrollen konnten nicht gespeichert werden.";
-        notice.className = "notice error";
-      } finally {
-        save.disabled = false;
-      }
-    });
 
     ticketConnectButton.addEventListener("click", async () => {
       setTicketNotice("");
@@ -255,31 +286,20 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         ticketApiBase = getTicketApiBase();
         ticketDashboardKey = ticketApiKeyInput.value;
         if (!ticketDashboardKey) throw new Error("Bitte den Ticket-Dashboard-Schlüssel eingeben.");
-        const data = await ticketRequest();
-        document.querySelector("#supportRoleId").value = data.supportRoleId || "";
-        document.querySelector("#ticketCategoryId").value = data.categoryId || "";
-        document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
-        document.querySelector("#teamLeadRoleId").value = data.teamLeadRoleId || "";
-        document.querySelector("#teamRoleId").value = data.teamRoleId || "";
+        await loadSettings();
         ticketApiKeyInput.value = "";
-        ticketSettingsForm.classList.remove("locked");
-        document.querySelector("#teamRoleForm").classList.remove("locked");
         try {
-          localStorage.setItem("ticketDashboardConnection", JSON.stringify({
-            apiBase: ticketApiBase,
-            key: ticketDashboardKey
-          }));
-          setTicketNotice("Verbunden und auf diesem Gerät gemerkt. Du kannst die Ticket-Einstellungen ändern.", "success");
-          loadTicketLogs();
+          localStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: ticketApiBase, key: ticketDashboardKey }));
+          setTicketNotice("Verbunden und auf diesem Browser gemerkt.", "success");
         } catch {
-          setTicketNotice("Verbunden, aber dein Browser konnte die Verbindung nicht speichern. Bei gemeinsam genutzten Geräten nachher trennen.", "error");
+          setTicketNotice("Verbunden, aber der Browser konnte die Verbindung nicht speichern.", "error");
         }
+        loadTicketLogs();
       } catch (error) {
         ticketApiBase = "";
         ticketDashboardKey = "";
         ticketSettingsForm.classList.add("locked");
-        document.querySelector("#teamRoleForm").classList.add("locked");
-        setTicketNotice(error.message || "Ticket-Bot nicht erreichbar. Adresse und HTTPS-Verbindung prüfen.", "error");
+        setTicketNotice(error.message || "Bot nicht erreichbar. HTTPS-Adresse und Proxy prüfen.", "error");
       } finally {
         ticketConnectButton.disabled = false;
       }
@@ -287,33 +307,38 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 
     ticketSettingsForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      setTicketNotice("");
-      const saveButton = document.querySelector("#ticketSaveButton");
-      saveButton.disabled = true;
+      const notice = document.querySelector("#settingNotice");
+      const save = document.querySelector("#ticketSaveButton");
+      const settings = {};
+      const idPattern = new RegExp("^[0-9]{17,20}$");
+      for (const input of document.querySelectorAll("#dynamicSettingsFields [data-setting-key]")) {
+        const field = settingFields.find(item => item.key === input.dataset.settingKey);
+        const value = input.type === "number" ? Number(input.value || 0) : input.value.trim();
+        if (field && ["role", "channel", "category"].includes(field.type) && value && !idPattern.test(value)) {
+          notice.textContent = "Bitte vollständige Discord-IDs aus Zahlen eingeben.";
+          notice.className = "notice error";
+          return;
+        }
+        settings[input.dataset.settingKey] = value;
+      }
+      save.disabled = true;
+      notice.textContent = "Speichere Einstellungen …";
+      notice.className = "notice";
       try {
-        const settings = {
-          supportRoleId: document.querySelector("#supportRoleId").value.trim(),
-          categoryId: document.querySelector("#ticketCategoryId").value.trim(),
-          logChannelId: document.querySelector("#ticketLogChannelId").value.trim()
-        };
-        const idPattern = /^\d{17,20}$/;
-        for (const [key, value] of Object.entries(settings)) {
-          if (value && !idPattern.test(value)) {
-            throw new Error("Bitte bei allen ausgefüllten IDs nur die vollständige Discord-ID aus Zahlen eingeben.");
-          }
-        }
-        const result = await ticketRequest("PUT", settings);
-        if (result.warning) {
-          setTicketNotice(result.warning, "error");
-        } else {
-          setTicketNotice("Ticket-Einstellungen gespeichert. Offene Tickets mit neuer Support-Rolle: " + result.updatedOpenTickets + ".", "success");
-        }
+        const result = await ticketRequest("PUT", { settings });
+        settingValues = result.values || { ...settingValues, ...settings };
+        renderSettings({ fields: settingFields, values: settingValues });
+        notice.textContent = "Einstellungen gespeichert und direkt übernommen.";
+        notice.className = "notice success";
       } catch (error) {
-        setTicketNotice(error.message || "Speichern fehlgeschlagen.", "error");
+        notice.textContent = error.message || "Einstellungen konnten nicht gespeichert werden.";
+        notice.className = "notice error";
       } finally {
-        saveButton.disabled = false;
+        save.disabled = false;
       }
     });
+
+    document.querySelector("#ticketLogRefresh").addEventListener("click", loadTicketLogs);
 
     async function restoreTicketConnection() {
       let saved;
@@ -323,20 +348,12 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
         localStorage.removeItem("ticketDashboardConnection");
       }
       if (!saved?.apiBase || !saved?.key) return;
-
       ticketApiBase = saved.apiBase;
       ticketDashboardKey = saved.key;
       ticketApiUrlInput.value = saved.apiBase;
       try {
-        const data = await ticketRequest();
-        document.querySelector("#supportRoleId").value = data.supportRoleId || "";
-        document.querySelector("#ticketCategoryId").value = data.categoryId || "";
-        document.querySelector("#ticketLogChannelId").value = data.logChannelId || "";
-        document.querySelector("#teamLeadRoleId").value = data.teamLeadRoleId || "";
-        document.querySelector("#teamRoleId").value = data.teamRoleId || "";
-        ticketSettingsForm.classList.remove("locked");
-        document.querySelector("#teamRoleForm").classList.remove("locked");
-        setTicketNotice("Ticket-Bot automatisch verbunden. Du kannst alle Ticket-Einstellungen ändern.", "success");
+        await loadSettings();
+        setTicketNotice("Ticket-Bot automatisch verbunden.", "success");
         loadTicketLogs();
       } catch {
         ticketApiBase = "";
@@ -351,22 +368,32 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
       link.addEventListener("click", (event) => {
         event.preventDefault();
         const target = link.dataset.view;
+        activeView = target;
         document.querySelectorAll(".nav [data-view]").forEach((item) => item.classList.toggle("active", item === link));
         document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === target));
-        document.querySelector("#pageTitle").textContent = target === "ticket-settings" ? "Ticket-Einstellungen" : target === "team-list" ? "Team-Liste" : "Bot-Verwaltung";
-        if (target === "team-list") loadTeamRoster();
+        const titles = {
+          "bot-management-view": "Bot-Verwaltung",
+          "ticket-settings": "Bot-Einstellungen",
+          "team-list": "Team-Liste"
+        };
+        document.querySelector("#pageTitle").textContent = titles[target] || "Bot-Verwaltung";
         history.replaceState(null, "", "#" + target);
+        if (target === "ticket-settings" && ticketApiBase && ticketDashboardKey && !settingFields.length) loadSettings();
+        if (target === "team-list" && ticketApiBase && ticketDashboardKey) loadTeamRoster();
       });
     });
-    const initialView = location.hash === "#ticket-settings" ? "ticket-settings" : location.hash === "#team-list" ? "team-list" : "bot-management-view";
+
+    const initialView = ["ticket-settings", "team-list"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "bot-management-view";
     const initialLink = [...document.querySelectorAll(".nav [data-view]")].find(link => link.dataset.view === initialView);
     if (initialLink && initialView !== "bot-management-view") initialLink.click();
 
     restoreTicketConnection();
     setInterval(() => {
-      if (ticketApiBase && ticketDashboardKey) loadTicketLogs();
+      if (ticketApiBase && ticketDashboardKey) {
+        loadTicketLogs();
+        if (activeView === "team-list") loadTeamRoster();
+      }
     }, 20000);
-
   </script>
 </body>
 </html>
