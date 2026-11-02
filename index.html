@@ -185,6 +185,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         });
         tabs.append(button);
         const sideButton = button.cloneNode(true);
+        sideButton.className = "side-category" + (category === activeCategory ? " active" : "");
         sideButton.addEventListener("click", () => {
           activeCategory = category;
           if (activeView !== "ticket-settings") setActiveView("ticket-settings");
@@ -495,22 +496,20 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       }
     }
 
-    document.querySelectorAll(".nav [data-view]").forEach((link) => {
-      link.addEventListener("click", (event) => {
+    function setActiveView(target) {
+      activeView = target;
+      document.querySelectorAll(".nav [data-view]").forEach(item => item.classList.toggle("active", item.dataset.view === target));
+      document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === target));
+      const titles = { "bot-management-view": "Bot-Verwaltung", "ticket-settings": "Bot-Einstellungen", "team-list": "Team-Liste" };
+      document.querySelector("#pageTitle").textContent = titles[target] || "Bot-Einstellungen";
+      history.replaceState(null, "", "#" + target);
+      if (target === "ticket-settings" && ticketApiBase && ticketDashboardKey && !settingFields.length) loadSettings();
+      if (target === "team-list" && ticketApiBase && ticketDashboardKey) loadTeamRoster();
+    }
+    document.querySelectorAll(".nav [data-view]").forEach(link => {
+      link.addEventListener("click", event => {
         event.preventDefault();
-        const target = link.dataset.view;
-        activeView = target;
-        document.querySelectorAll(".nav [data-view]").forEach((item) => item.classList.toggle("active", item === link));
-        document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === target));
-        const titles = {
-          "bot-management-view": "Bot-Verwaltung",
-          "ticket-settings": "Bot-Einstellungen",
-          "team-list": "Team-Liste"
-        };
-        document.querySelector("#pageTitle").textContent = titles[target] || "Bot-Verwaltung";
-        history.replaceState(null, "", "#" + target);
-        if (target === "ticket-settings" && ticketApiBase && ticketDashboardKey && !settingFields.length) loadSettings();
-        if (target === "team-list" && ticketApiBase && ticketDashboardKey) loadTeamRoster();
+        setActiveView(link.dataset.view);
       });
     });
 
