@@ -171,6 +171,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     let activeCategory = "";
     let activeTicketChannelId = "";
     let activeView = "bot-management-view";
+    let dashboardAccessLevel = "";
     let liveStatsLoading = false;
     const defaultSettingsCategories = ["Tickets", "Bewerbungen", "Verifizierung", "Unmute", "Rollen", "Community", "Berechtigungen", "Team", "Moderation", "Warn-System", "Sicherheit", "Logging"];
 
@@ -706,8 +707,8 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       }
       const loginError = new URLSearchParams(location.search).get("discord_login_error");
       if (loginError) {
-        const message = loginError === "no_server_owner"
-          ? "Zugriff abgelehnt: Du bist nicht Eigentümer des eingerichteten Discord-Servers."
+        const message = loginError === "no_dashboard_access"
+          ? "Kein Zugriff: Du brauchst die eingestellte Ticket-Protokoll-Rolle oder musst Server-Eigentümer sein."
           : "Discord-Anmeldung fehlgeschlagen. Prüfe OAuth-Einstellungen und versuche es erneut.";
         discordLoginNotice.textContent = message;
         history.replaceState(null, "", location.pathname + "#bot-management-view");
@@ -722,16 +723,27 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       ticketApiBase = saved.apiBase;
       ticketDiscordSession = saved.token;
       try {
-        await loadSettings();
         const account = await ticketRequest("GET", undefined, "/api/dashboard-auth/me");
-        discordAccountStatus.textContent = "Angemeldet als " + account.user.globalName;
+        dashboardAccessLevel = account.accessLevel || "owner";
+        if (dashboardAccessLevel === "owner") {
+          await loadSettings();
+          discordAccountStatus.textContent = "Angemeldet als " + account.user.globalName + " · Server-Eigentümer";
+          setTicketNotice("Discord-Server-Eigentümer angemeldet.", "success");
+          if (activeView === "live-status") loadLiveStats();
+        } else {
+          ticketSettingsForm.classList.add("locked");
+          document.querySelectorAll(".nav [data-view]").forEach(link => { link.hidden = link.dataset.view !== "ticket-log"; });
+          document.querySelector("#sidebarCategoryNav").hidden = true;
+          discordAccountStatus.textContent = "Angemeldet als " + account.user.globalName + " · Ticket-Protokoll";
+          setTicketNotice("Du hast Zugriff auf das Ticket-Protokoll.", "success");
+          setActiveView("ticket-log");
+        }
         discordLoginGate.hidden = true;
-        setTicketNotice("Discord-Server-Eigentümer angemeldet.", "success");
-        if (activeView === "live-status") loadLiveStats();
         loadTicketLogs();
       } catch (error) {
         ticketApiBase = "";
         ticketDiscordSession = "";
+        dashboardAccessLevel = "";
         try { sessionStorage.removeItem("ticketDashboardConnection"); } catch {}
         ticketSettingsForm.classList.add("locked");
         discordLoginGate.hidden = false;
@@ -740,6 +752,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     }
 
     function setActiveView(target) {
+      if (dashboardAccessLevel === "ticket-log" && target !== "ticket-log") target = "ticket-log";
       activeView = target;
       document.querySelectorAll(".nav [data-view]").forEach(item => item.classList.toggle("active", item.dataset.view === target));
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === target));
