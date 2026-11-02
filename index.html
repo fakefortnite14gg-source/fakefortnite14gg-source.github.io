@@ -43,6 +43,7 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 .category-tab{min-height:36px;padding:7px 12px;border:1px solid #303137;border-radius:999px;color:var(--muted);background:#17181c;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .category-tab.active{border-color:#6471aa;color:#fff;background:#242737}
 textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit;resize:vertical}
+.field input[type=checkbox]{width:22px;height:22px;min-height:22px;accent-color:#69dfc1;cursor:pointer}
 </style>
 </head>
 <body>
@@ -222,12 +223,13 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
           input.rows = 4;
         } else {
           input = document.createElement("input");
-          input.type = item.type === "number" ? "number" : "text";
+          input.type = item.type === "number" ? "number" : item.type === "boolean" ? "checkbox" : "text";
           if (["role", "channel", "category"].includes(item.type)) input.inputMode = "numeric";
         }
         input.id = id;
         input.dataset.settingKey = item.key;
-        input.value = settingValues[item.key] ?? "";
+        if (item.type === "boolean") input.checked = settingValues[item.key] === true || settingValues[item.key] === "true";
+        else input.value = settingValues[item.key] ?? "";
         if (item.type === "number") {
           input.min = "0";
           input.max = "10080";
@@ -451,7 +453,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       const idPattern = new RegExp("^[0-9]{17,20}$");
       for (const input of document.querySelectorAll("#dynamicSettingsFields [data-setting-key]")) {
         const field = settingFields.find(item => item.key === input.dataset.settingKey);
-        const value = input.type === "number" ? Number(input.value || 0) : input.value.trim();
+        const value = input.type === "checkbox" ? input.checked : input.type === "number" ? Number(input.value || 0) : input.value.trim();
         if (field && ["role", "channel", "category"].includes(field.type) && value && !idPattern.test(value)) {
           notice.textContent = "Bitte vollständige Discord-IDs aus Zahlen eingeben.";
           notice.className = "notice error";
