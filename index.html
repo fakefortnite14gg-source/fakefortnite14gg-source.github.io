@@ -16,12 +16,12 @@
 .connection{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end;padding:17px;border:1px solid #2b2c31;border-radius:15px;background:#17181c}
 label{display:block;margin-bottom:6px;color:#d7d7dc;font-size:12px;font-weight:700}input[type=url],input[type=password],input[type=number],input[type=text],select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit}
 .punishment-rules{display:grid;gap:10px}
-.punishment-rule{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(150px,1fr) minmax(150px,1fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #292a2f;border-radius:12px;background:#17181c}
+.punishment-rule{display:grid;grid-template-columns:minmax(110px,.65fr) minmax(135px,.8fr) minmax(240px,1.7fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #292a2f;border-radius:12px;background:#17181c}.punishment-role-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.punishment-role-fields .hint{grid-column:1/-1}
 .warning-role-rule{display:grid;grid-template-columns:minmax(115px,.65fr) minmax(160px,1fr) minmax(160px,1fr) minmax(135px,.8fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #292a2f;border-radius:12px;background:#17181c}
-.punishment-rule label{font-size:11px;color:var(--muted)}
+.punishment-rule label{font-size:11px;color:var(--muted)}.punishment-role-fields label{font-size:10px}
 .punishment-rule button{min-height:40px}
 .punishment-add{justify-self:start}
-@media(max-width:780px){.punishment-rule,.warning-role-rule{grid-template-columns:1fr 1fr}.punishment-rule button,.warning-role-rule button{grid-column:1/-1}}input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.hint{margin:6px 0 0;color:var(--muted);font-size:11px}
+@media(max-width:780px){.punishment-rule,.warning-role-rule{grid-template-columns:1fr 1fr}.punishment-role-fields{grid-template-columns:1fr}.punishment-rule button,.warning-role-rule button{grid-column:1/-1}}input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.hint{margin:6px 0 0;color:var(--muted);font-size:11px}
 button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit;font-weight:750;cursor:pointer}button.primary{color:#10131c;background:linear-gradient(135deg,#b5c1ff,#71dfc5)}button.secondary{color:var(--text);border:1px solid #303137;background:#1a1b20}button:hover{filter:brightness(1.08)}.settings{margin:0;padding:0;border:0}.setting-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{margin-bottom:16px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}.notice{min-height:24px;margin:12px 0 0;color:var(--muted);font-size:12px}.notice.error{color:#ff9d9d}.notice.success{color:var(--mint)}.locked{opacity:.45;pointer-events:none}.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.info{padding:16px;border:1px solid #292a2f;border-radius:15px;background:#111214}.info small{color:var(--muted)}.info strong{display:block;margin-top:7px}.view{display:none}.view.active{display:block}
 .activity{margin-top:22px;padding-top:22px;border-top:1px solid #292a2f}.activity .card-head{align-items:center}
 .activity-status{font-size:12px;color:var(--muted);margin:8px 0}.activity-list{display:grid;gap:9px;list-style:none;padding:0;margin:0}
@@ -313,7 +313,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
           editor.className = "punishment-rules";
           const hidden = document.createElement("input");
           hidden.type = "hidden"; hidden.id = id; hidden.dataset.settingKey = item.key;
-          const rules = Array.isArray(settingValues[item.key]) ? settingValues[item.key].map(rule => ({ threshold: Number(rule.threshold), action: rule.action, roleId: rule.roleId || "", durationMinutes: Number(rule.durationMinutes || 60) })) : [];
+          const rules = Array.isArray(settingValues[item.key]) ? settingValues[item.key].map(rule => ({ threshold: Number(rule.threshold), action: rule.action, roleId: rule.roleId || "", removeRoleId: rule.removeRoleId || "", durationMinutes: Number(rule.durationMinutes ?? 60) })) : [];
           function saveRules() { hidden.value = JSON.stringify(rules); }
           function drawRules() {
             editor.replaceChildren();
@@ -335,14 +335,32 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
               actionWrap.append(actionLabel, action);
               const valueWrap = document.createElement("div");
               if (rule.action === "role") {
-                const valueLabel = document.createElement("label"); valueLabel.textContent = "Mute-Rolle";
-                const role = document.createElement("select");
-                const empty = document.createElement("option"); empty.value = ""; empty.textContent = "Rolle auswählen"; role.append(empty);
-                for (const item of settingOptions.roles || []) {
-                  const option = document.createElement("option"); option.value = item.id; option.textContent = item.label; role.append(option);
-                }
-                role.value = rule.roleId; role.addEventListener("change", () => { rule.roleId = role.value; saveRules(); });
-                valueWrap.append(valueLabel, role);
+                valueWrap.className = "punishment-role-fields";
+                const createRoleSelect = (labelText, currentValue, onChange, emptyText) => {
+                  const wrap = document.createElement("div");
+                  const label = document.createElement("label"); label.textContent = labelText;
+                  const select = document.createElement("select");
+                  const empty = document.createElement("option"); empty.value = ""; empty.textContent = emptyText; select.append(empty);
+                  for (const item of settingOptions.roles || []) {
+                    const option = document.createElement("option"); option.value = item.id; option.textContent = item.label; select.append(option);
+                  }
+                  select.value = currentValue || "";
+                  select.addEventListener("change", () => { onChange(select.value); saveRules(); });
+                  wrap.append(label, select);
+                  return wrap;
+                };
+                valueWrap.append(
+                  createRoleSelect("Mute-Rolle", rule.roleId, value => { rule.roleId = value; }, "Mute-Rolle wählen"),
+                  createRoleSelect("Während des Mutes entfernen", rule.removeRoleId, value => { rule.removeRoleId = value; }, "Keine Zusatzrolle"),
+                );
+                const durationWrap = document.createElement("div");
+                const durationLabel = document.createElement("label"); durationLabel.textContent = "Mute-Dauer (Minuten)";
+                const duration = document.createElement("input");
+                duration.type = "number"; duration.min = "0"; duration.max = "40320"; duration.step = "1"; duration.value = rule.durationMinutes ?? 0;
+                duration.addEventListener("input", () => { rule.durationMinutes = Number(duration.value); saveRules(); });
+                const durationHint = document.createElement("p"); durationHint.className = "hint"; durationHint.textContent = "0 = für immer";
+                durationWrap.append(durationLabel, duration, durationHint);
+                valueWrap.append(durationWrap);
               } else if (rule.action === "timeout") {
                 const valueLabel = document.createElement("label"); valueLabel.textContent = "Dauer (Minuten)";
                 const duration = document.createElement("input");
