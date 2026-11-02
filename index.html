@@ -17,6 +17,7 @@
 label{display:block;margin-bottom:6px;color:#d7d7dc;font-size:12px;font-weight:700}input[type=url],input[type=password],input[type=number],input[type=text],select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit}
 .punishment-rules{display:grid;gap:10px}
 .punishment-rule{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(150px,1fr) minmax(150px,1fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #292a2f;border-radius:12px;background:#17181c}
+.warning-role-rule{display:grid;grid-template-columns:minmax(115px,.65fr) minmax(160px,1fr) minmax(160px,1fr) minmax(135px,.8fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #292a2f;border-radius:12px;background:#17181c}
 .punishment-rule label{font-size:11px;color:var(--muted)}
 .punishment-rule button{min-height:40px}
 .punishment-add{justify-self:start}
@@ -136,7 +137,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     let activeCategory = "";
     let activeTicketChannelId = "";
     let activeView = "bot-management-view";
-    const defaultSettingsCategories = ["Tickets", "Bewerbungen", "Verifizierung", "Unmute", "Rollen", "Community", "Berechtigungen", "Team", "Moderation", "Sicherheit", "Logging"];
+    const defaultSettingsCategories = ["Tickets", "Bewerbungen", "Verifizierung", "Unmute", "Rollen", "Community", "Berechtigungen", "Team", "Moderation", "Warn-System", "Sicherheit", "Logging"];
 
     function setTicketNotice(message, kind = "") {
       ticketNotice.textContent = message;
@@ -225,6 +226,63 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         const id = "dashboard-field-" + item.key;
         label.htmlFor = id;
         label.textContent = item.label;
+        if (item.type === "warning_role_rules") {
+          wrapper.style.gridColumn = "1 / -1";
+          wrapper.append(label);
+          const editor = document.createElement("div");
+          editor.className = "punishment-rules";
+          const hidden = document.createElement("input");
+          hidden.type = "hidden"; hidden.id = id; hidden.dataset.settingKey = item.key;
+          const rules = Array.isArray(settingValues[item.key]) ? settingValues[item.key].map(rule => ({
+            threshold: Number(rule.threshold), addRoleId: rule.addRoleId || "", removeRoleId: rule.removeRoleId || "", durationMinutes: Number(rule.durationMinutes || 60)
+          })) : [];
+          function saveRoleRules() { hidden.value = JSON.stringify(rules); }
+          function roleSelect(value, onChange, emptyText) {
+            const select = document.createElement("select");
+            const empty = document.createElement("option"); empty.value = ""; empty.textContent = emptyText; select.append(empty);
+            for (const roleOption of settingOptions.roles || []) {
+              const option = document.createElement("option"); option.value = roleOption.id; option.textContent = roleOption.label; select.append(option);
+            }
+            select.value = value || "";
+            select.addEventListener("change", () => { onChange(select.value); saveRoleRules(); });
+            return select;
+          }
+          function drawRoleRules() {
+            editor.replaceChildren();
+            rules.forEach((rule, index) => {
+              const row = document.createElement("div"); row.className = "warning-role-rule";
+              const thresholdWrap = document.createElement("div");
+              const thresholdLabel = document.createElement("label"); thresholdLabel.textContent = "Ab Verwarnung Nr.";
+              const threshold = document.createElement("input"); threshold.type = "number"; threshold.min = "1"; threshold.max = "1000"; threshold.step = "1"; threshold.value = rule.threshold;
+              threshold.addEventListener("input", () => { rule.threshold = Number(threshold.value); saveRoleRules(); });
+              thresholdWrap.append(thresholdLabel, threshold);
+              const addWrap = document.createElement("div");
+              const addLabel = document.createElement("label"); addLabel.textContent = "Rolle hinzufügen";
+              addWrap.append(addLabel, roleSelect(rule.addRoleId, value => rule.addRoleId = value, "Keine Rolle"));
+              const removeWrap = document.createElement("div");
+              const removeLabel = document.createElement("label"); removeLabel.textContent = "Rolle entfernen";
+              removeWrap.append(removeLabel, roleSelect(rule.removeRoleId, value => rule.removeRoleId = value, "Keine Rolle"));
+              const durationWrap = document.createElement("div");
+              const durationLabel = document.createElement("label"); durationLabel.textContent = "Dauer (Minuten)";
+              const duration = document.createElement("input"); duration.type = "number"; duration.min = "1"; duration.max = "40320"; duration.step = "1"; duration.value = rule.durationMinutes || 60;
+              duration.addEventListener("input", () => { rule.durationMinutes = Number(duration.value); saveRoleRules(); });
+              durationWrap.append(durationLabel, duration);
+              const remove = document.createElement("button"); remove.type = "button"; remove.className = "secondary"; remove.textContent = "Entfernen";
+              remove.addEventListener("click", () => { rules.splice(index, 1); saveRoleRules(); drawRoleRules(); });
+              row.append(thresholdWrap, addWrap, removeWrap, durationWrap, remove); editor.append(row);
+            });
+            const add = document.createElement("button"); add.type = "button"; add.className = "secondary punishment-add"; add.textContent = "+ Regel hinzufügen";
+            add.addEventListener("click", () => {
+              const nextThreshold = Math.max(0, ...rules.map(rule => Number(rule.threshold) || 0)) + 1;
+              rules.push({ threshold: nextThreshold, addRoleId: "", removeRoleId: "", durationMinutes: 60 });
+              saveRoleRules(); drawRoleRules();
+            });
+            editor.append(add); saveRoleRules();
+          }
+          drawRoleRules(); wrapper.append(editor, hidden);
+          if (item.hint) { const hint = document.createElement("p"); hint.className = "hint"; hint.textContent = item.hint; wrapper.append(hint); }
+          container.append(wrapper); continue;
+        }
         if (item.type === "punishment_rules") {
           wrapper.style.gridColumn = "1 / -1";
           wrapper.append(label);
