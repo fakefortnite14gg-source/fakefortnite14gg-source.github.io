@@ -53,6 +53,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     <a class="active" href="#bot-management-view" data-view="bot-management-view"><span class="ico">▦</span>Bot-Verwaltung</a>
     <div class="nav-divider"></div>
     <a href="#ticket-settings" data-view="ticket-settings"><span class="ico">▣</span>Ticket-Einstellungen</a>
+    <a href="#ticket-log" data-view="ticket-log"><span class="ico">▤</span>Ticket-Protokoll</a>
     <a href="#team-list" data-view="team-list"><span class="ico">♧</span>Team-Liste</a>
     <div class="nav-divider"></div>
     <div id="sidebarCategoryNav" class="sidebar-categories" aria-label="Bot-Einstellungskategorien"></div>
@@ -78,6 +79,11 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       <div class="actions"><button class="primary" id="ticketSaveButton" type="submit">Einstellungen speichern</button></div>
       <p class="notice" id="settingNotice" role="status" aria-live="polite">Verbinde zuerst deinen Bot.</p>
     </form>
+
+  </section>
+
+  <section class="card view" id="ticket-log" aria-labelledby="ticketLogPageTitle">
+    <div class="card-head"><div><h2 id="ticketLogPageTitle">Ticket-Protokoll</h2><p class="section-copy">Tickets und Bewerbungen ansehen, Nachrichten lesen und über den Bot antworten.</p></div><span class="tag">PROTOKOLL</span></div>
     <div class="activity" id="ticketActivity" aria-labelledby="ticketActivityTitle">
       <div class="card-head">
         <div><h2 id="ticketActivityTitle">Ticket-Protokoll</h2><p class="section-copy">Neue Tickets und Bewerbungen erscheinen hier automatisch.</p></div>
@@ -500,10 +506,11 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       activeView = target;
       document.querySelectorAll(".nav [data-view]").forEach(item => item.classList.toggle("active", item.dataset.view === target));
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === target));
-      const titles = { "bot-management-view": "Bot-Verwaltung", "ticket-settings": "Bot-Einstellungen", "team-list": "Team-Liste" };
+      const titles = { "bot-management-view": "Bot-Verwaltung", "ticket-settings": "Bot-Einstellungen", "ticket-log": "Ticket-Protokoll", "team-list": "Team-Liste" };
       document.querySelector("#pageTitle").textContent = titles[target] || "Bot-Einstellungen";
       history.replaceState(null, "", "#" + target);
       if (target === "ticket-settings" && ticketApiBase && ticketDashboardKey && !settingFields.length) loadSettings();
+      if (target === "ticket-log" && ticketApiBase && ticketDashboardKey) loadTicketLogs();
       if (target === "team-list" && ticketApiBase && ticketDashboardKey) loadTeamRoster();
     }
     document.querySelectorAll(".nav [data-view]").forEach(link => {
@@ -513,7 +520,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       });
     });
 
-    const initialView = ["ticket-settings", "team-list"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "bot-management-view";
+    const initialView = ["ticket-settings", "ticket-log", "team-list"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "bot-management-view";
     const initialLink = [...document.querySelectorAll(".nav [data-view]")].find(link => link.dataset.view === initialView);
     if (initialLink && initialView !== "bot-management-view") initialLink.click();
 
