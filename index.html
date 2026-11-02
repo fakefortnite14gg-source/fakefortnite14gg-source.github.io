@@ -134,6 +134,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         <div class="card-head"><div><h3 id="ticketConversationTitle">Ticket-Nachrichten</h3><p class="section-copy">Lies die letzten Nachrichten und antworte als Bot.</p></div><button class="secondary" id="ticketMessagesRefresh" type="button">Nachrichten laden</button></div>
         <div id="ticketMessagesStatus" class="activity-status" role="status" aria-live="polite"></div>
         <ul id="ticketMessagesList" class="activity-list"></ul>
+        <p id="ticketReplyAccessNotice" class="hint" hidden>Nur die eingestellte Ticket-Protokoll-Antwortrolle (z. B. Team Leitung) darf über den Bot antworten.</p>
         <form id="ticketReplyForm" style="margin-top:14px">
           <label for="ticketReplyText">Antwort über den Bot</label>
           <textarea id="ticketReplyText" maxlength="2000" rows="3" placeholder="Nachricht eingeben …" required></textarea>
@@ -725,6 +726,9 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       try {
         const account = await ticketRequest("GET", undefined, "/api/dashboard-auth/me");
         dashboardAccessLevel = account.accessLevel || "owner";
+        const ticketCanReply = dashboardAccessLevel === "owner" || account.canReply === true;
+        document.querySelector("#ticketReplyForm").hidden = !ticketCanReply;
+        document.querySelector("#ticketReplyAccessNotice").hidden = ticketCanReply;
         if (dashboardAccessLevel === "owner") {
           await loadSettings();
           discordAccountStatus.textContent = "Angemeldet als " + account.user.globalName + " · Server-Eigentümer";
