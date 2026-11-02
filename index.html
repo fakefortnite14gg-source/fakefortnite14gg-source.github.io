@@ -14,7 +14,13 @@
 .workspace{margin-left:270px;min-height:100vh;padding:42px clamp(22px,5vw,72px)}.content{max-width:980px;margin:0 auto}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}.crumb{font-size:12px;color:var(--muted)}.live{color:var(--mint);font-size:12px;display:flex;align-items:center;gap:8px}.live:before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
 .eyebrow{color:var(--accent);font-size:11px;letter-spacing:.12em;font-weight:800;text-transform:uppercase}h1{font-size:clamp(34px,5vw,48px);letter-spacing:-.045em;line-height:1.1;margin:8px 0}.intro{color:var(--muted);margin:0 0 26px;max-width:700px}.card{padding:24px;border:1px solid #2b2c31;border-radius:20px;background:#121316;margin-bottom:18px}.card-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}.card h2{font-size:19px;margin:0 0 5px}.section-copy{margin:0;color:var(--muted);font-size:13px}.tag{border:1px solid #344a43;color:var(--mint);background:#10201c;padding:4px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}
 .connection{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end;padding:17px;border:1px solid #2b2c31;border-radius:15px;background:#17181c}
-label{display:block;margin-bottom:6px;color:#d7d7dc;font-size:12px;font-weight:700}input[type=url],input[type=password],input[type=number],input[type=text]{width:100%;min-height:44px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit}input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.hint{margin:6px 0 0;color:var(--muted);font-size:11px}
+label{display:block;margin-bottom:6px;color:#d7d7dc;font-size:12px;font-weight:700}input[type=url],input[type=password],input[type=number],input[type=text],select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit}
+.punishment-rules{display:grid;gap:10px}
+.punishment-rule{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(150px,1fr) minmax(150px,1fr) auto;gap:10px;align-items:end;padding:12px;border:1px solid #292a2f;border-radius:12px;background:#17181c}
+.punishment-rule label{font-size:11px;color:var(--muted)}
+.punishment-rule button{min-height:40px}
+.punishment-add{justify-self:start}
+@media(max-width:780px){.punishment-rule{grid-template-columns:1fr 1fr}.punishment-rule button{grid-column:1/-1}}input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.hint{margin:6px 0 0;color:var(--muted);font-size:11px}
 button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit;font-weight:750;cursor:pointer}button.primary{color:#10131c;background:linear-gradient(135deg,#b5c1ff,#71dfc5)}button.secondary{color:var(--text);border:1px solid #303137;background:#1a1b20}button:hover{filter:brightness(1.08)}.settings{margin:0;padding:0;border:0}.setting-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{margin-bottom:16px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}.notice{min-height:24px;margin:12px 0 0;color:var(--muted);font-size:12px}.notice.error{color:#ff9d9d}.notice.success{color:var(--mint)}.locked{opacity:.45;pointer-events:none}.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.info{padding:16px;border:1px solid #292a2f;border-radius:15px;background:#111214}.info small{color:var(--muted)}.info strong{display:block;margin-top:7px}.view{display:none}.view.active{display:block}
 .activity{margin-top:22px;padding-top:22px;border-top:1px solid #292a2f}.activity .card-head{align-items:center}
 .activity-status{font-size:12px;color:var(--muted);margin:8px 0}.activity-list{display:grid;gap:9px;list-style:none;padding:0;margin:0}
@@ -126,6 +132,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     let ticketDashboardKey = "";
     let settingFields = [];
     let settingValues = {};
+    let settingOptions = { roles: [], channels: [], categories: [] };
     let activeCategory = "";
     let activeTicketChannelId = "";
     let activeView = "bot-management-view";
@@ -167,6 +174,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     function renderSettings(data) {
       settingFields = Array.isArray(data.fields) ? data.fields : [];
       settingValues = data.values || {};
+      if (data.options) settingOptions = data.options;
       const apiCategories = [...new Set(settingFields.map(item => item.category))];
       const categories = apiCategories.length ? apiCategories : defaultSettingsCategories;
       if (!categories.includes(activeCategory)) activeCategory = categories[0] || "";
@@ -187,7 +195,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         button.addEventListener("click", () => {
           activeCategory = category;
           if (activeView !== "ticket-settings") setActiveView("ticket-settings");
-          renderSettings({ fields: settingFields, values: settingValues });
+          renderSettings({ fields: settingFields, values: settingValues, options: settingOptions });
           if (activeCategory === "Tickets" || activeCategory === "Bewerbungen") loadTicketLogs();
         });
         tabs.append(button);
@@ -196,7 +204,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         sideButton.addEventListener("click", () => {
           activeCategory = category;
           if (activeView !== "ticket-settings") setActiveView("ticket-settings");
-          renderSettings({ fields: settingFields, values: settingValues });
+          renderSettings({ fields: settingFields, values: settingValues, options: settingOptions });
         });
         sideCategories.append(sideButton);
       }
@@ -217,25 +225,90 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         const id = "dashboard-field-" + item.key;
         label.htmlFor = id;
         label.textContent = item.label;
+        if (item.type === "punishment_rules") {
+          wrapper.style.gridColumn = "1 / -1";
+          wrapper.append(label);
+          const editor = document.createElement("div");
+          editor.className = "punishment-rules";
+          const hidden = document.createElement("input");
+          hidden.type = "hidden"; hidden.id = id; hidden.dataset.settingKey = item.key;
+          const rules = Array.isArray(settingValues[item.key]) ? settingValues[item.key].map(rule => ({ threshold: Number(rule.threshold), action: rule.action, roleId: rule.roleId || "", durationMinutes: Number(rule.durationMinutes || 60) })) : [];
+          function saveRules() { hidden.value = JSON.stringify(rules); }
+          function drawRules() {
+            editor.replaceChildren();
+            rules.forEach((rule, index) => {
+              const row = document.createElement("div"); row.className = "punishment-rule";
+              const thresholdWrap = document.createElement("div");
+              const thresholdLabel = document.createElement("label"); thresholdLabel.textContent = "Ab Verwarnung Nr.";
+              const threshold = document.createElement("input");
+              threshold.type = "number"; threshold.min = "1"; threshold.max = "1000"; threshold.step = "1"; threshold.value = rule.threshold;
+              threshold.addEventListener("input", () => { rule.threshold = Number(threshold.value); saveRules(); });
+              thresholdWrap.append(thresholdLabel, threshold);
+              const actionWrap = document.createElement("div");
+              const actionLabel = document.createElement("label"); actionLabel.textContent = "Aktion";
+              const action = document.createElement("select");
+              for (const [value, text] of [["warn","Nur Verwarnung"],["role","Mute-Rolle"],["timeout","Timeout"],["kick","Kick"],["ban","Ban"]]) {
+                const option = document.createElement("option"); option.value = value; option.textContent = text; action.append(option);
+              }
+              action.value = rule.action || "warn"; action.addEventListener("change", () => { rule.action = action.value; drawRules(); });
+              actionWrap.append(actionLabel, action);
+              const valueWrap = document.createElement("div");
+              if (rule.action === "role") {
+                const valueLabel = document.createElement("label"); valueLabel.textContent = "Mute-Rolle";
+                const role = document.createElement("select");
+                const empty = document.createElement("option"); empty.value = ""; empty.textContent = "Rolle auswählen"; role.append(empty);
+                for (const item of settingOptions.roles || []) {
+                  const option = document.createElement("option"); option.value = item.id; option.textContent = item.label; role.append(option);
+                }
+                role.value = rule.roleId; role.addEventListener("change", () => { rule.roleId = role.value; saveRules(); });
+                valueWrap.append(valueLabel, role);
+              } else if (rule.action === "timeout") {
+                const valueLabel = document.createElement("label"); valueLabel.textContent = "Dauer (Minuten)";
+                const duration = document.createElement("input");
+                duration.type = "number"; duration.min = "1"; duration.max = "40320"; duration.step = "1"; duration.value = rule.durationMinutes || 1440;
+                duration.addEventListener("input", () => { rule.durationMinutes = Number(duration.value); saveRules(); });
+                valueWrap.append(valueLabel, duration);
+              } else {
+                const valueLabel = document.createElement("label"); valueLabel.textContent = "Einstellung";
+                const valueText = document.createElement("p"); valueText.className = "hint"; valueText.textContent = "Keine zusätzliche Eingabe nötig.";
+                valueWrap.append(valueLabel, valueText);
+              }
+              const remove = document.createElement("button");
+              remove.type = "button"; remove.className = "secondary"; remove.textContent = "Entfernen";
+              remove.addEventListener("click", () => { rules.splice(index, 1); saveRules(); drawRules(); });
+              row.append(thresholdWrap, actionWrap, valueWrap, remove); editor.append(row);
+            });
+            const add = document.createElement("button");
+            add.type = "button"; add.className = "secondary punishment-add"; add.textContent = "+ Regel hinzufügen";
+            add.addEventListener("click", () => {
+              const nextThreshold = Math.max(0, ...rules.map(rule => Number(rule.threshold) || 0)) + 1;
+              rules.push({ threshold: nextThreshold, action: "warn", roleId: "", durationMinutes: 1440 });
+              saveRules(); drawRules();
+            });
+            editor.append(add); saveRules();
+          }
+          drawRules(); wrapper.append(editor, hidden);
+          if (item.hint) { const hint = document.createElement("p"); hint.className = "hint"; hint.textContent = item.hint; wrapper.append(hint); }
+          container.append(wrapper); continue;
+        }
         let input;
         if (item.type === "textarea") {
-          input = document.createElement("textarea");
-          input.rows = 4;
+          input = document.createElement("textarea"); input.rows = 4;
+        } else if (["role", "channel", "category"].includes(item.type)) {
+          input = document.createElement("select");
+          const empty = document.createElement("option"); empty.value = "";
+          empty.textContent = item.type === "role" ? "Keine Rolle ausgewählt" : item.type === "category" ? "Keine Kategorie ausgewählt" : "Kein Kanal ausgewählt";
+          input.append(empty);
+          const options = item.type === "role" ? settingOptions.roles : item.type === "category" ? settingOptions.categories : settingOptions.channels;
+          for (const choice of options || []) { const option = document.createElement("option"); option.value = choice.id; option.textContent = choice.label; input.append(option); }
         } else {
           input = document.createElement("input");
           input.type = item.type === "number" ? "number" : item.type === "boolean" ? "checkbox" : "text";
-          if (["role", "channel", "category"].includes(item.type)) input.inputMode = "numeric";
         }
-        input.id = id;
-        input.dataset.settingKey = item.key;
+        input.id = id; input.dataset.settingKey = item.key;
         if (item.type === "boolean") input.checked = settingValues[item.key] === true || settingValues[item.key] === "true";
         else input.value = settingValues[item.key] ?? "";
-        if (item.type === "number") {
-          input.min = "0";
-          input.max = "10080";
-          input.step = "1";
-        }
-        if (["role", "channel", "category"].includes(item.type)) input.placeholder = "Discord-ID oder leer lassen";
+        if (item.type === "number") { input.min = "0"; input.max = item.key === "WARN_TIMEOUT_MINUTES" ? "40320" : "10080"; input.step = "1"; }
         wrapper.append(label, input);
         if (item.hint) {
           const hint = document.createElement("p");
@@ -453,7 +526,12 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       const idPattern = new RegExp("^[0-9]{17,20}$");
       for (const input of document.querySelectorAll("#dynamicSettingsFields [data-setting-key]")) {
         const field = settingFields.find(item => item.key === input.dataset.settingKey);
-        const value = input.type === "checkbox" ? input.checked : input.type === "number" ? Number(input.value || 0) : input.value.trim();
+        let value;
+        if (field?.type === "punishment_rules") {
+          try { value = JSON.parse(input.value || "[]"); } catch { notice.textContent = "Bestrafungsregeln sind ungültig."; notice.className = "notice error"; return; }
+        } else {
+          value = input.type === "checkbox" ? input.checked : input.type === "number" ? Number(input.value || 0) : input.value.trim();
+        }
         if (field && ["role", "channel", "category"].includes(field.type) && value && !idPattern.test(value)) {
           notice.textContent = "Bitte vollständige Discord-IDs aus Zahlen eingeben.";
           notice.className = "notice error";
@@ -467,7 +545,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       try {
         const result = await ticketRequest("PUT", { settings });
         settingValues = result.values || { ...settingValues, ...settings };
-        renderSettings({ fields: settingFields, values: settingValues });
+        renderSettings({ fields: settingFields, values: settingValues, options: settingOptions });
         notice.textContent = "Einstellungen gespeichert und direkt übernommen.";
         notice.className = "notice success";
       } catch (error) {
