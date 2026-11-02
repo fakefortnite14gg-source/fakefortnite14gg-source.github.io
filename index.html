@@ -66,7 +66,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
   <div class="login-box">
     <div class="eyebrow">Bot-Dashboard</div>
     <h1>Mit Discord anmelden</h1>
-    <p>Der Server-Eigentümer erhält vollen Zugriff. Mitglieder mit der festgelegten Rolle erhalten Zugriff auf das Ticket-Protokoll.</p>
+    <p>Der Server-Eigentümer erhält vollen Zugriff. Mitglieder mit der festgelegten Rolle erhalten Zugriff auf das Ticket-Protokoll. Nach der ersten Anmeldung merkt sich dieser Browser dein Konto.</p>
     <button class="primary" id="discordLoginButton" type="button">Mit Discord anmelden</button>
     <div id="discordLoginNotice" class="login-error" role="status" aria-live="polite"></div>
   </div>
@@ -698,6 +698,16 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     document.querySelector("#ticketLogRefresh").addEventListener("click", loadTicketLogs);
 
     async function restoreTicketConnection() {
+      try {
+        if (!localStorage.getItem("ticketDashboardConnection")) {
+          const previousTabSession = sessionStorage.getItem("ticketDashboardConnection");
+          if (previousTabSession) localStorage.setItem("ticketDashboardConnection", previousTabSession);
+        }
+        if (!localStorage.getItem("pendingTicketApiBase")) {
+          const previousPendingApi = sessionStorage.getItem("pendingTicketApiBase");
+          if (previousPendingApi) localStorage.setItem("pendingTicketApiBase", previousPendingApi);
+        }
+      } catch {}
       const authMatch = location.hash.match(/^#discord-session=([a-f0-9]+)$/);
       if (authMatch) {
         const pendingApiBase = localStorage.getItem("pendingTicketApiBase") || "";
