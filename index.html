@@ -58,9 +58,19 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 .category-tab.active{border-color:#6471aa;color:#fff;background:#242737}
 textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;border-radius:10px;color:var(--text);background:#0d0e11;font:inherit;resize:vertical}
 .field input[type=checkbox]{width:22px;height:22px;min-height:22px;accent-color:#69dfc1;cursor:pointer}
+.login-gate{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 10%,#18233d,#080a0f 70%)}.login-gate[hidden]{display:none}.login-box{width:min(100%,460px);padding:32px;border:1px solid #2c3b58;border-radius:22px;background:#111827;box-shadow:0 24px 80px #0008}.login-box h1{font-size:30px}.login-box p{color:var(--muted)}.login-box .primary{width:100%;margin-top:14px}.login-error{min-height:24px;color:#ff8b8b;font-size:13px;margin-top:12px}.account-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #2b2c31;border-radius:14px;background:#17181c}.account-row p{margin:4px 0 0}
 </style>
 </head>
 <body>
+<div id="discordLoginGate" class="login-gate">
+  <div class="login-box">
+    <div class="eyebrow">Bot-Dashboard</div>
+    <h1>Mit Discord anmelden</h1>
+    <p>Verwalte den verbundenen Bot-Server. Der Zugriff wird nur freigeschaltet, wenn du dessen Eigentümer bist.</p>
+    <button class="primary" id="discordLoginButton" type="button">Mit Discord anmelden</button>
+    <div id="discordLoginNotice" class="login-error" role="status" aria-live="polite"></div>
+  </div>
+</div>
 <div class="app">
 <aside class="sidebar" aria-label="Hauptnavigation">
   <div class="server"><div class="server-logo">t</div><div><div class="server-name">test server</div><div class="plan">Discord Ticket-Bot</div></div></div>
@@ -80,10 +90,9 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
   <div class="topbar"><div class="crumb" id="pageTitle">Bot-Verwaltung</div><div class="live">Ticket-Dashboard</div></div>
   <section class="card view active" id="bot-management-view" aria-labelledby="ticketTitle">
     <div class="card-head"><div><h2 id="ticketTitle">Ticket-Bot</h2><p class="section-copy">Support-Rolle, Ticket-Kategorie und Transkript-Kanal verwalten.</p></div><span class="tag">DISCORD SUPPORT</span></div>
-    <div class="connection" id="connect">
-      <div><label for="ticketApiUrl">Ticket-API-Adresse</label><input id="ticketApiUrl" type="url" placeholder="https://goatbot.host-infinity.com" autocomplete="url"><p class="hint">HTTPS-Adresse deines Bots, z. B. https://goatbot.host-infinity.com.</p></div>
-      <div><strong>Discord-Konto</strong><p class="hint">Melde dich mit einem Konto an, das den Bot-Server verwalten darf.</p></div>
-      <button class="primary" id="ticketConnectButton" type="button">Mit Discord verbinden</button>
+    <div class="account-row">
+      <div><strong id="discordAccountStatus">Discord nicht angemeldet</strong><p class="hint">Server-Eigentümer kann alle Dashboard-Einstellungen verwalten.</p></div>
+      <button class="secondary" id="discordLogoutButton" type="button">Abmelden</button>
     </div>
     <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
   </section>
@@ -146,12 +155,15 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
 </div></main>
 </div>
 <script>
-    const ticketApiUrlInput = document.querySelector("#ticketApiUrl");
-
-    const ticketConnectButton = document.querySelector("#ticketConnectButton");
+    const DEFAULT_TICKET_API_BASE = "https://goatbot.host-infinity.com";
+    const discordLoginGate = document.querySelector("#discordLoginGate");
+    const discordLoginButton = document.querySelector("#discordLoginButton");
+    const discordLoginNotice = document.querySelector("#discordLoginNotice");
+    const discordAccountStatus = document.querySelector("#discordAccountStatus");
+    const discordLogoutButton = document.querySelector("#discordLogoutButton");
     const ticketSettingsForm = document.querySelector("#ticketSettingsForm");
     const ticketNotice = document.querySelector("#ticketNotice");
-    let ticketApiBase = "";
+    let ticketApiBase = DEFAULT_TICKET_API_BASE;
     let ticketDiscordSession = "";
     let settingFields = [];
     let settingValues = {};
@@ -168,11 +180,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     }
 
     function getTicketApiBase() {
-      const parsed = new URL(ticketApiUrlInput.value.trim());
-      if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
-        throw new Error("Bitte eine HTTPS-Adresse ohne Zugangsdaten eingeben.");
-      }
-      return parsed.origin;
+      return DEFAULT_TICKET_API_BASE;
     }
 
     async function ticketRequest(method = "GET", body, endpoint = "/api/ticket-dashboard/settings") {
@@ -630,15 +638,19 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       }
     }
 
-    ticketConnectButton.addEventListener("click", () => {
-      setTicketNotice("");
-      try {
-        ticketApiBase = getTicketApiBase();
-        localStorage.setItem("pendingTicketApiBase", ticketApiBase);
-        window.location.href = ticketApiBase + "/api/dashboard-auth/login";
-      } catch (error) {
-        setTicketNotice(error.message || "Bot-Adresse ist ungültig.", "error");
-      }
+    discordLoginButton.addEventListener("click", () => {
+      discordLoginNotice.textContent = "";
+      ticketApiBase = getTicketApiBase();
+      sessionStorage.setItem("pendingTicketApiBase", ticketApiBase);
+      window.location.href = ticketApiBase + "/api/dashboard-auth/login";
+    });
+
+    discordLogoutButton.addEventListener("click", async () => {
+      try { await ticketRequest("POST", {}, "/api/dashboard-auth/logout"); } catch {}
+      sessionStorage.removeItem("ticketDashboardConnection");
+      sessionStorage.removeItem("pendingTicketApiBase");
+      ticketDiscordSession = "";
+      location.reload();
     });
 
     ticketSettingsForm.addEventListener("submit", async (event) => {
@@ -684,43 +696,46 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     async function restoreTicketConnection() {
       const authMatch = location.hash.match(/^#discord-session=([a-f0-9]+)$/);
       if (authMatch) {
-        const pendingApiBase = localStorage.getItem("pendingTicketApiBase") || "";
+        const pendingApiBase = sessionStorage.getItem("pendingTicketApiBase") || "";
         if (pendingApiBase) {
           const sessionToken = authMatch[1];
-          localStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: pendingApiBase, token: sessionToken }));
-          localStorage.removeItem("pendingTicketApiBase");
+          sessionStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: pendingApiBase, token: sessionToken }));
+          sessionStorage.removeItem("pendingTicketApiBase");
         }
         history.replaceState(null, "", location.pathname + location.search + "#bot-management-view");
       }
       const loginError = new URLSearchParams(location.search).get("discord_login_error");
       if (loginError) {
-        const message = loginError === "no_server_access"
-          ? "Dein Discord-Konto darf den für den Bot eingerichteten Server nicht verwalten."
+        const message = loginError === "no_server_owner"
+          ? "Zugriff abgelehnt: Du bist nicht Eigentümer des eingerichteten Discord-Servers."
           : "Discord-Anmeldung fehlgeschlagen. Prüfe OAuth-Einstellungen und versuche es erneut.";
-        setTicketNotice(message, "error");
+        discordLoginNotice.textContent = message;
         history.replaceState(null, "", location.pathname + "#bot-management-view");
       }
       let saved;
       try {
-        saved = JSON.parse(localStorage.getItem("ticketDashboardConnection") || "null");
+        saved = JSON.parse(sessionStorage.getItem("ticketDashboardConnection") || "null");
       } catch {
-        localStorage.removeItem("ticketDashboardConnection");
+        sessionStorage.removeItem("ticketDashboardConnection");
       }
-      if (!saved?.apiBase || !saved?.token) return;
+      if (!saved?.apiBase || !saved?.token) { discordLoginGate.hidden = false; return; }
       ticketApiBase = saved.apiBase;
       ticketDiscordSession = saved.token;
-      ticketApiUrlInput.value = saved.apiBase;
       try {
         await loadSettings();
-        setTicketNotice("Mit Discord angemeldet und verbunden.", "success");
+        const account = await ticketRequest("GET", undefined, "/api/dashboard-auth/me");
+        discordAccountStatus.textContent = "Angemeldet als " + account.user.globalName;
+        discordLoginGate.hidden = true;
+        setTicketNotice("Discord-Server-Eigentümer angemeldet.", "success");
         if (activeView === "live-status") loadLiveStats();
         loadTicketLogs();
       } catch (error) {
         ticketApiBase = "";
         ticketDiscordSession = "";
-        try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
+        try { sessionStorage.removeItem("ticketDashboardConnection"); } catch {}
         ticketSettingsForm.classList.add("locked");
-        setTicketNotice(error.message || "Discord-Sitzung abgelaufen. Bitte neu anmelden.", "error");
+        discordLoginGate.hidden = false;
+        discordLoginNotice.textContent = error.message || "Discord-Sitzung abgelaufen. Bitte neu anmelden.";
       }
     }
 
