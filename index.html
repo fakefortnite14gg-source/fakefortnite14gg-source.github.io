@@ -200,7 +200,9 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
           401: data.message || "Discord-Anmeldung abgelaufen. Melde dich erneut an.",
           503: data.error === "dashboard_not_configured" ? "Dashboard-API ist auf dem Bot-Server noch nicht eingerichtet." : (data.message || "Discord-Login ist auf dem Bot-Server noch nicht eingerichtet.")
         };
-        throw new Error(messages[response.status] || data.message || data.error || "Verbindung fehlgeschlagen.");
+        const error = new Error(messages[response.status] || data.message || data.error || "Verbindung fehlgeschlagen.");
+        error.status = response.status;
+        throw error;
       }
       return data;
     }
@@ -745,13 +747,19 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         discordLoginGate.hidden = true;
         loadTicketLogs();
       } catch (error) {
-        ticketApiBase = "";
-        ticketDiscordSession = "";
         dashboardAccessLevel = "";
-        try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
         ticketSettingsForm.classList.add("locked");
         discordLoginGate.hidden = false;
-        discordLoginNotice.textContent = error.message || "Discord-Sitzung abgelaufen. Bitte neu anmelden.";
+        if (error.status === 401) {
+          ticketApiBase = "";
+          ticketDiscordSession = "";
+          try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
+          discordLoginNotice.textContent = "Deine Discord-Anmeldung ist abgelaufen oder ungültig. Bitte melde dich erneut an.";
+        } else if (error.status === 403) {
+          discordLoginNotice.textContent = "Dein Discord-Konto hat aktuell keinen Zugriff. Prüfe deine Serverrolle.";
+        } else {
+          discordLoginNotice.textContent = "Der Bot-Server ist gerade nicht erreichbar. Deine Anmeldung bleibt gespeichert; starte die Bot-API und lade diese Seite neu.";
+        }
       }
     }
 
