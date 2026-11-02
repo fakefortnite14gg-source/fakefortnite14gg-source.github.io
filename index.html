@@ -642,14 +642,14 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     discordLoginButton.addEventListener("click", () => {
       discordLoginNotice.textContent = "";
       ticketApiBase = getTicketApiBase();
-      sessionStorage.setItem("pendingTicketApiBase", ticketApiBase);
+      localStorage.setItem("pendingTicketApiBase", ticketApiBase);
       window.location.href = ticketApiBase + "/api/dashboard-auth/login";
     });
 
     discordLogoutButton.addEventListener("click", async () => {
       try { await ticketRequest("POST", {}, "/api/dashboard-auth/logout"); } catch {}
-      sessionStorage.removeItem("ticketDashboardConnection");
-      sessionStorage.removeItem("pendingTicketApiBase");
+      localStorage.removeItem("ticketDashboardConnection");
+      localStorage.removeItem("pendingTicketApiBase");
       ticketDiscordSession = "";
       location.reload();
     });
@@ -697,11 +697,11 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     async function restoreTicketConnection() {
       const authMatch = location.hash.match(/^#discord-session=([a-f0-9]+)$/);
       if (authMatch) {
-        const pendingApiBase = sessionStorage.getItem("pendingTicketApiBase") || "";
+        const pendingApiBase = localStorage.getItem("pendingTicketApiBase") || "";
         if (pendingApiBase) {
           const sessionToken = authMatch[1];
-          sessionStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: pendingApiBase, token: sessionToken }));
-          sessionStorage.removeItem("pendingTicketApiBase");
+          localStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: pendingApiBase, token: sessionToken }));
+          localStorage.removeItem("pendingTicketApiBase");
         }
         history.replaceState(null, "", location.pathname + location.search + "#bot-management-view");
       }
@@ -715,9 +715,9 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       }
       let saved;
       try {
-        saved = JSON.parse(sessionStorage.getItem("ticketDashboardConnection") || "null");
+        saved = JSON.parse(localStorage.getItem("ticketDashboardConnection") || "null");
       } catch {
-        sessionStorage.removeItem("ticketDashboardConnection");
+        localStorage.removeItem("ticketDashboardConnection");
       }
       if (!saved?.apiBase || !saved?.token) { discordLoginGate.hidden = false; return; }
       ticketApiBase = saved.apiBase;
@@ -744,7 +744,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
         ticketApiBase = "";
         ticketDiscordSession = "";
         dashboardAccessLevel = "";
-        try { sessionStorage.removeItem("ticketDashboardConnection"); } catch {}
+        try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
         ticketSettingsForm.classList.add("locked");
         discordLoginGate.hidden = false;
         discordLoginNotice.textContent = error.message || "Discord-Sitzung abgelaufen. Bitte neu anmelden.";
