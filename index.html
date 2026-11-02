@@ -28,6 +28,13 @@ button{min-height:42px;border:0;border-radius:10px;padding:9px 15px;font:inherit
 .activity-item{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:12px 14px;border:1px solid #292a2f;background:#17181c;border-radius:12px}
 .activity-item strong{display:block;font-size:13px}.activity-item small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
 .activity-item a{color:var(--text);text-decoration:none}.activity-item a:hover{text-decoration:underline}.activity-time{color:var(--muted);font-size:11px;white-space:nowrap}
+.stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.stat-card{display:flex;align-items:center;gap:16px;min-height:90px;padding:16px;border:1px solid #263450;border-radius:16px;background:#0e1728}
+.stat-icon{width:46px;height:46px;display:grid;place-items:center;border:1px solid #24518a;border-radius:13px;background:#102444;color:#60a5fa;font-size:22px}
+.stat-label{color:#7795bd;font-size:11px;letter-spacing:.12em;font-weight:800;text-transform:uppercase}
+.stat-value{margin-top:3px;font-size:18px;font-weight:800}
+.stat-detail{color:var(--muted);font-size:11px;margin-top:2px}
+@media(max-width:780px){.stats-grid{grid-template-columns:1fr}}
 @media(max-width:780px){.activity-item{align-items:flex-start;flex-direction:column}.activity .card-head{align-items:flex-start;flex-direction:column}}
 @media(max-width:780px){.sidebar{position:relative;width:100%;height:auto;padding:10px 12px}.server{height:48px}.nav{display:flex;overflow:auto;gap:5px;padding:7px 0 10px}.nav a{white-space:nowrap;min-height:38px;margin:0}.nav-heading,.nav-divider{display:none}.lang{display:none}.workspace{margin:0;padding:25px 16px}.connection{grid-template-columns:1fr}.connection button{width:100%}.setting-grid,.info-grid{grid-template-columns:1fr}.topbar{margin-bottom:18px}.card{padding:18px}}
 
@@ -59,6 +66,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
   <div class="server"><div class="server-logo">t</div><div><div class="server-name">test server</div><div class="plan">Discord Ticket-Bot</div></div></div>
   <nav class="nav" aria-label="Bot-Verwaltung">
     <a class="active" href="#bot-management-view" data-view="bot-management-view"><span class="ico">▦</span>Bot-Verwaltung</a>
+    <a href="#live-status" data-view="live-status"><span class="ico">◷</span>Live-Status</a>
     <div class="nav-divider"></div>
     <a href="#ticket-settings" data-view="ticket-settings"><span class="ico">▣</span>Ticket-Einstellungen</a>
     <a href="#ticket-log" data-view="ticket-log"><span class="ico">▤</span>Ticket-Protokoll</a>
@@ -79,6 +87,20 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     </div>
     <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
   </section>
+  <section class="card view" id="live-status" aria-labelledby="liveStatusTitle">
+    <div class="card-head">
+      <div><h2 id="liveStatusTitle">Live-Status</h2><p class="section-copy">Laufzeit und Ressourcenwerte vom Bot-Server.</p></div>
+      <button class="secondary" id="liveStatsRefresh" type="button">Jetzt aktualisieren</button>
+    </div>
+    <div id="liveStatsStatus" class="activity-status" role="status" aria-live="polite">Verbinde den Bot, um Live-Werte zu laden.</div>
+    <div class="stats-grid">
+      <article class="stat-card"><div class="stat-icon">◷</div><div><div class="stat-label">Uptime</div><div id="statUptime" class="stat-value">—</div><div class="stat-detail">Bot-Laufzeit seit dem letzten Start</div></div></article>
+      <article class="stat-card"><div class="stat-icon">▥</div><div><div class="stat-label">CPU</div><div id="statCpu" class="stat-value">—</div><div id="statCpuDetail" class="stat-detail">Wird geladen</div></div></article>
+      <article class="stat-card"><div class="stat-icon">▤</div><div><div class="stat-label">Arbeitsspeicher</div><div id="statMemory" class="stat-value">—</div><div id="statMemoryDetail" class="stat-detail">Wird geladen</div></div></article>
+      <article class="stat-card"><div class="stat-icon">▰</div><div><div class="stat-label">Bot-Dateien</div><div id="statDisk" class="stat-value">—</div><div id="statDiskDetail" class="stat-detail">Wird geladen</div></div></article>
+    </div>
+  </section>
+
   <section class="card view" id="ticket-settings" aria-labelledby="ticketSettingsTitle">
     <div class="card-head"><div><h2 id="ticketSettingsTitle">Bot-Einstellungen</h2><p class="section-copy">Konfiguriere Kanäle, Rollen, Nachrichten und Bot-Funktionen nach Bereichen.</p></div><span class="tag">EINSTELLUNGEN</span></div>
     <div id="settingCategoryTabs" class="category-tabs" aria-label="Einstellungsbereiche"></div>
@@ -137,6 +159,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     let activeCategory = "";
     let activeTicketChannelId = "";
     let activeView = "bot-management-view";
+    let liveStatsLoading = false;
     const defaultSettingsCategories = ["Tickets", "Bewerbungen", "Verifizierung", "Unmute", "Rollen", "Community", "Berechtigungen", "Team", "Moderation", "Warn-System", "Sicherheit", "Logging"];
 
     function setTicketNotice(message, kind = "") {
@@ -393,6 +416,41 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       if (activeView === "team-list") loadTeamRoster();
     }
 
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0) return "Nicht verfügbar";
+      const units = ["Bytes", "KiB", "MiB", "GiB", "TiB"];
+      let value = bytes, index = 0;
+      while (value >= 1024 && index < units.length - 1) { value /= 1024; index++; }
+      return value.toFixed(index === 0 ? 0 : 2) + " " + units[index];
+    }
+    function formatUptime(seconds) {
+      if (!Number.isFinite(seconds)) return "—";
+      const days = Math.floor(seconds / 86400), hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60), secs = Math.floor(seconds % 60);
+      return days ? days + "d " + hours + "h " + minutes + "m" : hours + "h " + minutes + "m " + secs + "s";
+    }
+    async function loadLiveStats() {
+      if (!ticketApiBase || !ticketDashboardKey || liveStatsLoading) return;
+      liveStatsLoading = true;
+      const status = document.querySelector("#liveStatsStatus");
+      try {
+        const data = await ticketRequest("GET", undefined, "/api/ticket-dashboard/stats");
+        document.querySelector("#statUptime").textContent = formatUptime(data.uptimeSeconds);
+        document.querySelector("#statCpu").textContent = Number.isFinite(data.cpuPercent) ? data.cpuPercent.toFixed(2) + "%" + (Number.isFinite(data.cpuLimitPercent) ? " / " + data.cpuLimitPercent.toFixed(0) + "%" : "") : "Nicht verfügbar";
+        document.querySelector("#statCpuDetail").textContent = data.cpuSource === "container" ? "Container-Auslastung" : "Bot-Prozess; Container-Limit nicht verfügbar";
+        document.querySelector("#statMemory").textContent = formatBytes(data.memoryUsedBytes) + (Number.isFinite(data.memoryLimitBytes) ? " / " + formatBytes(data.memoryLimitBytes) : "");
+        document.querySelector("#statMemoryDetail").textContent = data.memorySource === "container" ? "Container-Arbeitsspeicher" : "Bot-Prozess; Container-Limit nicht verfügbar";
+        document.querySelector("#statDisk").textContent = formatBytes(data.diskUsedBytes) + (Number.isFinite(data.diskLimitBytes) ? " / " + formatBytes(data.diskLimitBytes) : "");
+        document.querySelector("#statDiskDetail").textContent = Number.isFinite(data.diskLimitBytes) ? "Speicherlimit des Servers" : "Dateien im Bot-Ordner; Host-Limit wird nicht bereitgestellt";
+        status.textContent = "Live aktualisiert · " + new Intl.DateTimeFormat("de-DE", { timeStyle: "medium" }).format(new Date(data.sampledAt));
+      } catch (error) {
+        status.textContent = error.message || "Live-Werte konnten nicht geladen werden. Aktualisiere die Bot-index.js.";
+      } finally {
+        liveStatsLoading = false;
+      }
+    }
+    document.querySelector("#liveStatsRefresh").addEventListener("click", loadLiveStats);
+
     async function loadTicketLogs() {
       const status = document.querySelector("#ticketActivityStatus");
       const list = document.querySelector("#ticketActivityList");
@@ -644,10 +702,11 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       activeView = target;
       document.querySelectorAll(".nav [data-view]").forEach(item => item.classList.toggle("active", item.dataset.view === target));
       document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === target));
-      const titles = { "bot-management-view": "Bot-Verwaltung", "ticket-settings": "Bot-Einstellungen", "ticket-log": "Ticket-Protokoll", "team-list": "Team-Liste" };
+      const titles = { "bot-management-view": "Bot-Verwaltung", "live-status": "Live-Status", "ticket-settings": "Bot-Einstellungen", "ticket-log": "Ticket-Protokoll", "team-list": "Team-Liste" };
       document.querySelector("#pageTitle").textContent = titles[target] || "Bot-Einstellungen";
       history.replaceState(null, "", "#" + target);
       if (target === "ticket-settings" && ticketApiBase && ticketDashboardKey && !settingFields.length) loadSettings();
+      if (target === "live-status" && ticketApiBase && ticketDashboardKey) loadLiveStats();
       if (target === "ticket-log" && ticketApiBase && ticketDashboardKey) loadTicketLogs();
       if (target === "team-list" && ticketApiBase && ticketDashboardKey) loadTeamRoster();
     }
@@ -658,12 +717,15 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       });
     });
 
-    const initialView = ["ticket-settings", "ticket-log", "team-list"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "bot-management-view";
+    const initialView = ["live-status", "ticket-settings", "ticket-log", "team-list"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "bot-management-view";
     const initialLink = [...document.querySelectorAll(".nav [data-view]")].find(link => link.dataset.view === initialView);
     if (initialLink && initialView !== "bot-management-view") initialLink.click();
 
     renderSettings({ fields: [], values: {} });
     restoreTicketConnection();
+    setInterval(() => {
+      if (ticketApiBase && ticketDashboardKey && activeView === "live-status") loadLiveStats();
+    }, 5000);
     setInterval(() => {
       if (ticketApiBase && ticketDashboardKey) {
         loadTicketLogs();
