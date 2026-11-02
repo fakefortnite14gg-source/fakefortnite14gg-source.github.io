@@ -82,8 +82,8 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     <div class="card-head"><div><h2 id="ticketTitle">Ticket-Bot</h2><p class="section-copy">Support-Rolle, Ticket-Kategorie und Transkript-Kanal verwalten.</p></div><span class="tag">DISCORD SUPPORT</span></div>
     <div class="connection" id="connect">
       <div><label for="ticketApiUrl">Ticket-API-Adresse</label><input id="ticketApiUrl" type="url" placeholder="https://goatbot.host-infinity.com" autocomplete="url"><p class="hint">HTTPS-Adresse deines Bots, z. B. https://goatbot.host-infinity.com.</p></div>
-      <div><label for="ticketApiKey">Dashboard-Schlüssel</label><input id="ticketApiKey" type="password" autocomplete="off" placeholder="TICKET_DASHBOARD_API_KEY"><p class="hint">Nur beim ersten Verbinden nötig. Wird in diesem Browser gemerkt.</p></div>
-      <button class="primary" id="ticketConnectButton" type="button">Verbinden</button>
+      <div><strong>Discord-Konto</strong><p class="hint">Melde dich mit einem Konto an, das den Bot-Server verwalten darf.</p></div>
+      <button class="primary" id="ticketConnectButton" type="button">Mit Discord verbinden</button>
     </div>
     <p class="notice" id="ticketNotice" role="status" aria-live="polite"></p>
   </section>
@@ -147,12 +147,12 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
 </div>
 <script>
     const ticketApiUrlInput = document.querySelector("#ticketApiUrl");
-    const ticketApiKeyInput = document.querySelector("#ticketApiKey");
+
     const ticketConnectButton = document.querySelector("#ticketConnectButton");
     const ticketSettingsForm = document.querySelector("#ticketSettingsForm");
     const ticketNotice = document.querySelector("#ticketNotice");
     let ticketApiBase = "";
-    let ticketDashboardKey = "";
+    let ticketDiscordSession = "";
     let settingFields = [];
     let settingValues = {};
     let settingOptions = { roles: [], channels: [], categories: [] };
@@ -179,7 +179,7 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       const response = await fetch(ticketApiBase + endpoint, {
         method,
         headers: {
-          "x-ticket-dashboard-key": ticketDashboardKey,
+          ...(ticketDiscordSession ? { "Authorization": "Bearer " + ticketDiscordSession } : {}),
           ...(body ? { "Content-Type": "application/json" } : {})
         },
         ...(body ? { body: JSON.stringify(body) } : {})
@@ -187,8 +187,8 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         const messages = {
-          401: "Dashboard-Schlüssel stimmt nicht.",
-          503: "Dashboard-API ist auf dem Bot-Server noch nicht eingerichtet."
+          401: data.message || "Discord-Anmeldung abgelaufen. Melde dich erneut an.",
+          503: data.error === "dashboard_not_configured" ? "Dashboard-API ist auf dem Bot-Server noch nicht eingerichtet." : (data.message || "Discord-Login ist auf dem Bot-Server noch nicht eingerichtet.")
         };
         throw new Error(messages[response.status] || data.message || data.error || "Verbindung fehlgeschlagen.");
       }
@@ -448,9 +448,13 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       return days ? days + "d " + hours + "h " + minutes + "m" : hours + "h " + minutes + "m " + secs + "s";
     }
     async function loadLiveStats() {
-      if (!ticketApiBase || !ticketDashboardKey || liveStatsLoading) return;
-      liveStatsLoading = true;
       const status = document.querySelector("#liveStatsStatus");
+      if (liveStatsLoading) return;
+      if (!ticketApiBase || !ticketDiscordSession) {
+        status.textContent = "Melde dich zuerst unter Bot-Verwaltung mit Discord an.";
+        return;
+      }
+      liveStatsLoading = true;
       try {
         const data = await ticketRequest("GET", undefined, "/api/ticket-dashboard/stats");
         document.querySelector("#statUptime").textContent = formatUptime(data.uptimeSeconds);
@@ -626,29 +630,14 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       }
     }
 
-    ticketConnectButton.addEventListener("click", async () => {
+    ticketConnectButton.addEventListener("click", () => {
       setTicketNotice("");
-      ticketConnectButton.disabled = true;
       try {
         ticketApiBase = getTicketApiBase();
-        ticketDashboardKey = ticketApiKeyInput.value;
-        if (!ticketDashboardKey) throw new Error("Bitte den Ticket-Dashboard-Schlüssel eingeben.");
-        await loadSettings();
-        ticketApiKeyInput.value = "";
-        try {
-          localStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: ticketApiBase, key: ticketDashboardKey }));
-          setTicketNotice("Verbunden und auf diesem Browser gemerkt.", "success");
-        } catch {
-          setTicketNotice("Verbunden, aber der Browser konnte die Verbindung nicht speichern.", "error");
-        }
-        loadTicketLogs();
+        localStorage.setItem("pendingTicketApiBase", ticketApiBase);
+        window.location.href = ticketApiBase + "/api/dashboard-auth/login";
       } catch (error) {
-        ticketApiBase = "";
-        ticketDashboardKey = "";
-        ticketSettingsForm.classList.add("locked");
-        setTicketNotice(error.message || "Bot nicht erreichbar. HTTPS-Adresse und Proxy prüfen.", "error");
-      } finally {
-        ticketConnectButton.disabled = false;
+        setTicketNotice(error.message || "Bot-Adresse ist ungültig.", "error");
       }
     });
 
@@ -693,26 +682,45 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     document.querySelector("#ticketLogRefresh").addEventListener("click", loadTicketLogs);
 
     async function restoreTicketConnection() {
+      const authMatch = location.hash.match(/^#discord-session=([a-f0-9]+)$/);
+      if (authMatch) {
+        const pendingApiBase = localStorage.getItem("pendingTicketApiBase") || "";
+        if (pendingApiBase) {
+          const sessionToken = authMatch[1];
+          localStorage.setItem("ticketDashboardConnection", JSON.stringify({ apiBase: pendingApiBase, token: sessionToken }));
+          localStorage.removeItem("pendingTicketApiBase");
+        }
+        history.replaceState(null, "", location.pathname + location.search + "#bot-management-view");
+      }
+      const loginError = new URLSearchParams(location.search).get("discord_login_error");
+      if (loginError) {
+        const message = loginError === "no_server_access"
+          ? "Dein Discord-Konto darf den für den Bot eingerichteten Server nicht verwalten."
+          : "Discord-Anmeldung fehlgeschlagen. Prüfe OAuth-Einstellungen und versuche es erneut.";
+        setTicketNotice(message, "error");
+        history.replaceState(null, "", location.pathname + "#bot-management-view");
+      }
       let saved;
       try {
         saved = JSON.parse(localStorage.getItem("ticketDashboardConnection") || "null");
       } catch {
         localStorage.removeItem("ticketDashboardConnection");
       }
-      if (!saved?.apiBase || !saved?.key) return;
+      if (!saved?.apiBase || !saved?.token) return;
       ticketApiBase = saved.apiBase;
-      ticketDashboardKey = saved.key;
+      ticketDiscordSession = saved.token;
       ticketApiUrlInput.value = saved.apiBase;
       try {
         await loadSettings();
-        setTicketNotice("Ticket-Bot automatisch verbunden.", "success");
+        setTicketNotice("Mit Discord angemeldet und verbunden.", "success");
+        if (activeView === "live-status") loadLiveStats();
         loadTicketLogs();
-      } catch {
+      } catch (error) {
         ticketApiBase = "";
-        ticketDashboardKey = "";
+        ticketDiscordSession = "";
         try { localStorage.removeItem("ticketDashboardConnection"); } catch {}
         ticketSettingsForm.classList.add("locked");
-        setTicketNotice("Gespeicherte Verbindung ungültig oder Bot nicht erreichbar. Bitte erneut verbinden.", "error");
+        setTicketNotice(error.message || "Discord-Sitzung abgelaufen. Bitte neu anmelden.", "error");
       }
     }
 
@@ -723,10 +731,10 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
       const titles = { "bot-management-view": "Bot-Verwaltung", "live-status": "Live-Status", "ticket-settings": "Bot-Einstellungen", "ticket-log": "Ticket-Protokoll", "team-list": "Team-Liste" };
       document.querySelector("#pageTitle").textContent = titles[target] || "Bot-Einstellungen";
       history.replaceState(null, "", "#" + target);
-      if (target === "ticket-settings" && ticketApiBase && ticketDashboardKey && !settingFields.length) loadSettings();
-      if (target === "live-status" && ticketApiBase && ticketDashboardKey) loadLiveStats();
-      if (target === "ticket-log" && ticketApiBase && ticketDashboardKey) loadTicketLogs();
-      if (target === "team-list" && ticketApiBase && ticketDashboardKey) loadTeamRoster();
+      if (target === "ticket-settings" && ticketApiBase && ticketDiscordSession && !settingFields.length) loadSettings();
+      if (target === "live-status" && ticketApiBase && ticketDiscordSession) loadLiveStats();
+      if (target === "ticket-log" && ticketApiBase && ticketDiscordSession) loadTicketLogs();
+      if (target === "team-list" && ticketApiBase && ticketDiscordSession) loadTeamRoster();
     }
     document.querySelectorAll(".nav [data-view]").forEach(link => {
       link.addEventListener("click", event => {
@@ -742,10 +750,10 @@ textarea{width:100%;min-height:100px;padding:10px 12px;border:1px solid #303137;
     renderSettings({ fields: [], values: {} });
     restoreTicketConnection();
     setInterval(() => {
-      if (ticketApiBase && ticketDashboardKey && activeView === "live-status") loadLiveStats();
+      if (ticketApiBase && ticketDiscordSession && activeView === "live-status") loadLiveStats();
     }, 5000);
     setInterval(() => {
-      if (ticketApiBase && ticketDashboardKey) {
+      if (ticketApiBase && ticketDiscordSession) {
         loadTicketLogs();
         if (activeView === "team-list") loadTeamRoster();
       }
